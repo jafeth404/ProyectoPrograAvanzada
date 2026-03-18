@@ -1,0 +1,112 @@
+﻿@{
+    ViewData["Title"] = "Crear Pedido";
+    var productos = ViewData["Productos"] as List<proyectoprogra.Models.Entities.Producto>;
+}
+
+<h2>Crear Pedido</h2>
+
+<form asp-action="Create" method="post">
+    <div class="mb-3">
+        <label>Tipo de Pedido</label>
+        <select name="TipoPedido" class="form-control">
+            <option value="">Seleccione tipo</option>
+            <option value="Mesa">Mesa</option>
+            <option value="Delivery">Delivery</option>
+            <option value="Pickup">Pickup</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label>Mesa</label>
+        <select name="MesaId" asp-items="ViewBag.MesaId" class="form-control"></select>
+    </div>
+
+    <hr />
+
+    <h4>Agregar Producto</h4>
+
+    <div class="row">
+        <div class="col">
+            <select id="productoSelect" class="form-control">
+                <option value="">Seleccione producto</option>
+                @foreach (var p in productos)
+                {
+                    <option value="@p.ProductoId">@p.Nombre (@p.Precio)</option>
+                }
+            </select>
+        </div>
+
+        <div class="col">
+            <input type="number" id="cantidadInput" class="form-control" placeholder="Cantidad" />
+        </div>
+
+        <div class="col">
+            <button type="button" class="btn btn-primary" onclick="agregarProducto()">Agregar</button>
+        </div>
+    </div>
+
+    <hr />
+
+    <h4>Detalle del Pedido</h4>
+
+    <table class="table" id="tabla">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <input type="hidden" name="ItemsJson" id="ItemsJson" />
+
+    <button type="submit" class="btn btn-success">Guardar Pedido</button>
+
+</form>
+
+@section Scripts {
+    <script>
+        let items = [];
+
+        function agregarProducto() {
+            const select = document.getElementById("productoSelect");
+            const productoId = select.value;
+            const productoText = select.options[select.selectedIndex].text;
+            const cantidad = document.getElementById("cantidadInput").value;
+
+            if (!productoId || cantidad <= 0) return;
+
+            items.push({
+                ProductoId: parseInt(productoId),
+                Cantidad: parseInt(cantidad),
+                Nombre: productoText
+            });
+
+            renderTabla();
+        }
+
+        function eliminar(index) {
+            items.splice(index, 1);
+            renderTabla();
+        }
+
+        function renderTabla() {
+            const tbody = document.querySelector("#tabla tbody");
+            tbody.innerHTML = "";
+
+            items.forEach((item, index) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.Nombre}</td>
+                        <td>${item.Cantidad}</td>
+                        <td><button type="button" onclick="eliminar(${index})">X</button></td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById("ItemsJson").value = JSON.stringify(items);
+        }
+    </script>
+}

@@ -1,91 +1,146 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - RestauranteApp</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/proyectoprogra.styles.css" asp-append-version="true" />
+
+    <!-- SNEAT CSS -->
+    <link href="/sneat/assets/vendor/css/core.css" rel="stylesheet" />
+    <link href="/sneat/assets/vendor/css/theme-default.css" rel="stylesheet" />
+    <link href="/sneat/assets/css/demo.css" rel="stylesheet" />
+    <link href="/sneat/assets/vendor/fonts/boxicons.css" rel="stylesheet" />
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+
+    <!-- Helpers -->
+    <script src="/sneat/assets/vendor/js/helpers.js"></script>
+
 </head>
+
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                
-                <!-- Nombre app -->
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
-                    RestauranteApp
-                </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
-                        aria-controls="navbarSupportedContent"
-                        aria-expanded="false"
-                        aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+    <div class="layout-wrapper layout-content-navbar">
+        <div class="layout-container">
 
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+            <!-- 🔥 SIDEBAR -->
+            <aside class="layout-menu menu-vertical menu bg-menu-theme">
 
-                    <!-- NAVBAR NUEVO -->
-                    <ul class="navbar-nav flex-grow-1">
+                <div class="app-brand demo">
+                    <a asp-controller="Home" asp-action="Index" class="app-brand-link d-flex align-items-center">
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Categorias" asp-action="Index">
-                                Categorias
-                            </a>
-                        </li>
+                        <span class="app-brand-logo me-2">
+                            <i class="bx bx-restaurant fs-2 text-primary"></i>
+                        </span>
 
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Productos" asp-action="Index">
-                                Productos
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Mesas" asp-action="Index">
-                                Mesas
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Pedidos" asp-action="Index">
-                                Pedidos
-                            </a>
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Facturas" asp-action="Index">
-                                Facturas
-                            </a>
-                        </li>
-
-                    </ul>
-
-                    <!-- LOGIN -->
-                    <partial name="_LoginPartial" />
+                        <span class="app-brand-text fw-bold fs-5">RestauranteApp</span>
+                    </a>
                 </div>
-            </div>
-        </nav>
-    </header>
 
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+                <ul class="menu-inner py-1">
+
+                    <li class="menu-header small text-uppercase">
+                        <span class="menu-header-text">Gestión</span>
+                    </li>
+
+                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                        <a asp-controller="Home" asp-action="Index" class="menu-link">
+                            <i class="menu-icon bx bx-home-alt"></i>
+                            <div>Dashboard</div>
+                        </a>
+                    </li>
+
+                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categorias" ? "active" : "")">
+                        <a asp-controller="Categorias" asp-action="Index" class="menu-link">
+                            <i class="menu-icon bx bx-grid-alt"></i>
+                            <div>Categorías</div>
+                        </a>
+                    </li>
+
+                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Productos" ? "active" : "")">
+                        <a asp-controller="Productos" asp-action="Index" class="menu-link">
+                            <i class="menu-icon bx bx-package"></i>
+                            <div>Productos</div>
+                        </a>
+                    </li>
+
+                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Mesas" ? "active" : "")">
+                        <a asp-controller="Mesas" asp-action="Index" class="menu-link">
+                            <i class="menu-icon bx bx-chair"></i>
+                            <div>Mesas</div>
+                        </a>
+                    </li>
+
+                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Pedidos" ? "active" : "")">
+                        <a asp-controller="Pedidos" asp-action="Index" class="menu-link">
+                            <i class="menu-icon bx bx-cart-alt"></i>
+                            <div>Pedidos</div>
+                        </a>
+                    </li>
+
+                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Facturas" ? "active" : "")">
+                        <a asp-controller="Facturas" asp-action="Index" class="menu-link">
+                            <i class="menu-icon bx bx-file-blank"></i>
+                            <div>Facturas</div>
+                        </a>
+                    </li>
+
+                </ul>
+
+            </aside>
+
+            <!-- 🔥 CONTENIDO -->
+            <div class="layout-page">
+
+                <!-- 🔝 NAVBAR -->
+                <nav class="layout-navbar navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme shadow-sm">
+                    <div class="navbar-nav-right d-flex align-items-center w-100 px-3">
+
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bx bx-home-circle me-2 text-primary"></i>
+                            Dashboard
+                        </h5>
+
+                        <div class="ms-auto d-flex align-items-center gap-3">
+
+                            <!-- Notificaciones -->
+                            <i class="bx bx-bell fs-4"></i>
+
+                            <!-- Usuario -->
+                            <partial name="_LoginPartial" />
+
+                        </div>
+
+                    </div>
+                </nav>
+
+                <!-- 🔥 MAIN -->
+                <div class="content-wrapper">
+                    <div class="container-xxl flex-grow-1 container-p-y">
+
+                        @RenderBody()
+
+                    </div>
+                </div>
+
+                <!-- 🔻 FOOTER -->
+                <footer class="content-footer footer bg-footer-theme">
+                    <div class="container-xxl text-center py-3">
+                        © 2026 - RestauranteApp 🚀
+                    </div>
+                </footer>
+
+            </div>
+
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - RestauranteApp -
-            <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
-
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <!-- 🔥 SCRIPTS -->
+    <script src="/sneat/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="/sneat/assets/vendor/libs/popper/popper.js"></script>
+    <script src="/sneat/assets/vendor/js/bootstrap.js"></script>
+    <script src="/sneat/assets/vendor/js/menu.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>

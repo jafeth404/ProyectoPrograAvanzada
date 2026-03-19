@@ -2,45 +2,53 @@
 
 @{
     ViewData["Title"] = "Delete";
-    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Delete</h1>
+<h1>Eliminar Pedido</h1>
 
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <h4>Pedido</h4>
+<div class="card p-4 mb-4">
+    <h4>¿Seguro que quieres eliminar este pedido?</h4>
     <hr />
+
     <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.TipoPedido)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.TipoPedido)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Fecha)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Fecha)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Estado)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Estado)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Mesa)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Mesa.MesaId)
-        </dd>
+        <dt class="col-sm-3">Tipo Pedido</dt>
+        <dd class="col-sm-9">@Model.TipoPedido</dd>
+
+        <dt class="col-sm-3">Fecha</dt>
+        <dd class="col-sm-9">@Model.Fecha</dd>
+
+        <dt class="col-sm-3">Mesa</dt>
+        <dd class="col-sm-9">@Model.Mesa?.MesaId</dd>
     </dl>
-    
-    <form asp-action="Delete">
-        <input type="hidden" asp-for="PedidoId" />
-        <input type="submit" value="Delete" class="btn btn-danger" /> |
-        <a asp-action="Index">Back to List</a>
-    </form>
 </div>
+
+<div class="card p-4 mb-3">
+    <h5>Detalle del Pedido</h5>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model.PedidoDetalles)
+        {
+            <tr>
+                <td>@item.Producto.Nombre</td>
+                <td>@item.Cantidad</td>
+                <td>@item.PrecioUnitario</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<form asp-action="Delete">
+    <input type="hidden" asp-for="PedidoId" />
+
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

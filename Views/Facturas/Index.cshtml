@@ -1,90 +1,39 @@
 ﻿@model IEnumerable<proyectoprogra.Models.Entities.Factura>
 
 @{
-    ViewData["Title"] = "Index";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Facturas";
 }
 
-<h1>Index</h1>
+<h2>Facturas</h2>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create" class="btn btn-success">Nueva Factura</a>
 </p>
+
 <table class="table">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.NumeroFactura)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Fecha)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Subtotal)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Iva)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Propina)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CostoEmpaque)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CostoDelivery)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Total)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UsuarioId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Pedido)
-            </th>
+            <th>#</th>
+            <th>Pedido</th>
+            <th>Fecha</th>
+            <th>Total</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+    @foreach (var f in Model)
+    {
         <tr>
+            <td>@f.NumeroFactura</td>
+            <td>@f.PedidoId</td>
+            <td>@f.Fecha</td>
+            <td>₡@f.Total</td>
             <td>
-                @Html.DisplayFor(modelItem => item.NumeroFactura)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Fecha)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Subtotal)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Iva)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Propina)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CostoEmpaque)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CostoDelivery)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Total)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UsuarioId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Pedido.PedidoId)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.FacturaId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.FacturaId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.FacturaId">Delete</a>
+                <a asp-action="Details" asp-route-id="@f.FacturaId" class="btn btn-sm btn-info">Details</a>
+                <a asp-action="Edit" asp-route-id="@f.FacturaId" class="btn btn-sm btn-primary">Edit</a>
+                <a asp-action="Delete" asp-route-id="@f.FacturaId" class="btn btn-sm btn-danger">Delete</a>
             </td>
         </tr>
-}
+    }
     </tbody>
 </table>

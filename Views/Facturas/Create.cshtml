@@ -1,78 +1,75 @@
-﻿@model proyectoprogra.Models.Entities.Factura
+﻿@model proyectoprogra.Models.Entities.Pedido
 
 @{
-    ViewData["Title"] = "Create";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Crear Factura";
 }
 
-<h1>Create</h1>
+<h2>Crear Factura</h2>
 
-<h4>Factura</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="NumeroFactura" class="control-label"></label>
-                <input asp-for="NumeroFactura" class="form-control" />
-                <span asp-validation-for="NumeroFactura" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="PedidoId" class="control-label"></label>
-                <select asp-for="PedidoId" class ="form-control" asp-items="ViewBag.PedidoId"></select>
-            </div>
-            <div class="form-group">
-                <label asp-for="Fecha" class="control-label"></label>
-                <input asp-for="Fecha" class="form-control" />
-                <span asp-validation-for="Fecha" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Subtotal" class="control-label"></label>
-                <input asp-for="Subtotal" class="form-control" />
-                <span asp-validation-for="Subtotal" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Iva" class="control-label"></label>
-                <input asp-for="Iva" class="form-control" />
-                <span asp-validation-for="Iva" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Propina" class="control-label"></label>
-                <input asp-for="Propina" class="form-control" />
-                <span asp-validation-for="Propina" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CostoEmpaque" class="control-label"></label>
-                <input asp-for="CostoEmpaque" class="form-control" />
-                <span asp-validation-for="CostoEmpaque" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CostoDelivery" class="control-label"></label>
-                <input asp-for="CostoDelivery" class="form-control" />
-                <span asp-validation-for="CostoDelivery" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Total" class="control-label"></label>
-                <input asp-for="Total" class="form-control" />
-                <span asp-validation-for="Total" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="UsuarioId" class="control-label"></label>
-                <input asp-for="UsuarioId" class="form-control" />
-                <span asp-validation-for="UsuarioId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+<div asp-validation-summary="All" class="text-danger"></div>
+
+<form asp-action="Create" method="get" class="mb-4">
+    <div class="mb-3">
+        <label class="form-label">Pedido</label>
+        <select name="pedidoId" class="form-control" asp-items="ViewBag.Pedidos"></select>
     </div>
-</div>
+    <button type="submit" class="btn btn-primary">Cargar Pedido</button>
+</form>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+@if (Model != null)
+{
+    var subtotal = Model.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+    var iva = subtotal * 0.13m;
 
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <div class="card p-4 mb-4">
+        <h4>Pedido #@Model.PedidoId</h4>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Total Línea</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var d in Model.PedidoDetalles)
+            {
+                <tr>
+                    <td>@d.Producto?.Nombre</td>
+                    <td>@d.Cantidad</td>
+                    <td>₡@d.PrecioUnitario</td>
+                    <td>₡@(d.Cantidad * d.PrecioUnitario)</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+
+        <p><strong>Subtotal:</strong> ₡@subtotal</p>
+        <p><strong>IVA:</strong> ₡@iva</p>
+    </div>
+
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="pedidoId" value="@Model.PedidoId" />
+
+        <div class="mb-3">
+            <label class="form-label">Propina</label>
+            <input type="number" step="0.01" name="propina" class="form-control" value="0" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Costo Empaque</label>
+            <input type="number" step="0.01" name="costoEmpaque" class="form-control" value="0" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Costo Delivery</label>
+            <input type="number" step="0.01" name="costoDelivery" class="form-control" value="0" />
+        </div>
+
+        <button type="submit" class="btn btn-success">Generar Factura</button>
+        <a asp-action="Index" class="btn btn-secondary">Volver</a>
+    </form>
 }

@@ -18,5 +18,53 @@ namespace proyectoprogra.Data
         public DbSet<PedidoDetalle> PedidoDetalles { get; set; }
         public DbSet<Factura> Facturas { get; set; }
         public DbSet<FacturaDetalle> FacturaDetalles { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.Precio)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Producto>()
+                .Property(p => p.CostoEmpaque)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<PedidoDetalle>()
+                .Property(p => p.PrecioUnitario)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Subtotal)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Iva)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Total)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.Propina)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.CostoEmpaque)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.CostoDelivery)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<FacturaDetalle>()
+                .Property(f => f.PrecioUnitario)
+                .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<FacturaDetalle>()
+                .Property(f => f.TotalLinea)
+                .HasColumnType("decimal(10,2)");
+        }
     }
 }

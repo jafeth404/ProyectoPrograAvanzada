@@ -1,79 +1,48 @@
 ﻿@model proyectoprogra.Models.Entities.Factura
 
-@{
-    ViewData["Title"] = "Details";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-}
+<h2>Factura #@Model.NumeroFactura</h2>
 
-<h1>Details</h1>
+<p><strong>Fecha:</strong> @Model.Fecha</p>
 
-<div>
-    <h4>Factura</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.NumeroFactura)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.NumeroFactura)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Fecha)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Fecha)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Subtotal)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Subtotal)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Iva)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Iva)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Propina)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Propina)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CostoEmpaque)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CostoEmpaque)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CostoDelivery)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CostoDelivery)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Total)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Total)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.UsuarioId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.UsuarioId)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Pedido)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Pedido.PedidoId)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.FacturaId">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio</th>
+            <th>Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var d in Model.FacturaDetalles)
+        {
+            <tr>
+                <td>@d.Producto.Nombre</td>
+                <td>@d.Cantidad</td>
+                <td>@d.PrecioUnitario</td>
+                <td>@d.TotalLinea</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<hr />
+
+<p><strong>Subtotal:</strong> ₡@Model.Subtotal</p>
+<p><strong>IVA (13%):</strong> ₡@Model.Iva</p>
+<p><strong>Total:</strong> ₡@Model.Total</p>
+
+<div class="mt-4 d-flex gap-2">
+
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        ← Volver
+    </a>
+
+    <a asp-action="Edit" asp-route-id="@Model.FacturaId" class="btn btn-warning">
+        ✏️ Editar
+    </a>
+
+    <a asp-action="Delete" asp-route-id="@Model.FacturaId" class="btn btn-danger">
+    🗑 Eliminar
+</a>
 </div>

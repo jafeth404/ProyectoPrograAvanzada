@@ -1,164 +1,197 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using proyectoprogra.Data;
 using proyectoprogra.Models.Entities;
 
-namespace proyectoprogra.Controllers
+public class FacturasController : Controller
 {
-    public class FacturasController : Controller
+    private readonly ApplicationDbContext _context;
+
+    public FacturasController(ApplicationDbContext context)
     {
-        private readonly ApplicationDbContext _context;
+        _context = context;
+    }
 
-        public FacturasController(ApplicationDbContext context)
+    public async Task<IActionResult> Index()
+    {
+        var facturas = await _context.Facturas
+            .Include(f => f.Pedido)
+            .ToListAsync();
+
+        return View(facturas);
+    }
+
+    public async Task<IActionResult> Details(int id)
+    {
+        var factura = await _context.Facturas
+            .Include(f => f.Pedido)
+            .Include(f => f.FacturaDetalles)
+            .ThenInclude(fd => fd.Producto)
+            .FirstOrDefaultAsync(f => f.FacturaId == id);
+
+        if (factura == null)
+            return NotFound();
+
+        return View(factura);
+    }
+
+    public async Task<IActionResult> Create(int? pedidoId)
+    {
+        ViewBag.Pedidos = new SelectList(
+            await _context.Pedidos.ToListAsync(),
+            "PedidoId",
+            "PedidoId",
+            pedidoId
+        );
+
+        if (pedidoId == null)
+            return View(null);
+
+        var pedido = await _context.Pedidos
+            .Include(p => p.PedidoDetalles)
+            .ThenInclude(d => d.Producto)
+            .FirstOrDefaultAsync(p => p.PedidoId == pedidoId);
+
+        if (pedido == null)
+            return NotFound();
+
+        return View(pedido);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(int pedidoId, decimal? propina, decimal? costoEmpaque, decimal? costoDelivery)
+    {
+        var pedido = await _context.Pedidos
+            .Include(p => p.PedidoDetalles)
+            .ThenInclude(d => d.Producto)
+            .FirstOrDefaultAsync(p => p.PedidoId == pedidoId);
+
+        if (pedido == null)
         {
-            _context = context;
+            ViewBag.Pedidos = new SelectList(await _context.Pedidos.ToListAsync(), "PedidoId", "PedidoId", pedidoId);
+            ModelState.AddModelError("", "El pedido no existe.");
+            return View(null);
         }
 
-        // GET: Facturas
-        public async Task<IActionResult> Index()
+        if (!pedido.PedidoDetalles.Any())
         {
-            var applicationDbContext = _context.Facturas.Include(f => f.Pedido);
-            return View(await applicationDbContext.ToListAsync());
+            ViewBag.Pedidos = new SelectList(await _context.Pedidos.ToListAsync(), "PedidoId", "PedidoId", pedidoId);
+            ModelState.AddModelError("", "El pedido no tiene productos.");
+            return View(pedido);
         }
 
-        // GET: Facturas/Details/5
-        public async Task<IActionResult> Details(int? id)
+        var yaExiste = await _context.Facturas.AnyAsync(f => f.PedidoId == pedidoId);
+        if (yaExiste)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var factura = await _context.Facturas
-                .Include(f => f.Pedido)
-                .FirstOrDefaultAsync(m => m.FacturaId == id);
-            if (factura == null)
-            {
-                return NotFound();
-            }
-
-            return View(factura);
+            ViewBag.Pedidos = new SelectList(await _context.Pedidos.ToListAsync(), "PedidoId", "PedidoId", pedidoId);
+            ModelState.AddModelError("", "Ese pedido ya tiene una factura.");
+            return View(pedido);
         }
 
-        // GET: Facturas/Create
-        public IActionResult Create()
+        decimal subtotal = pedido.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+        decimal iva = subtotal * 0.13m;
+        decimal prop = propina ?? 0;
+        decimal empaque = costoEmpaque ?? 0;
+        decimal delivery = costoDelivery ?? 0;
+        decimal total = subtotal + iva + prop + empaque + delivery;
+
+        var factura = new Factura
         {
-            ViewData["PedidoId"] = new SelectList(_context.Pedidos, "PedidoId", "PedidoId");
-            return View();
+            NumeroFactura = $"FAC-{DateTime.Now:yyyyMMddHHmmss}",
+            PedidoId = pedidoId,
+            Fecha = DateTime.Now,
+            Subtotal = subtotal,
+            Iva = iva,
+            Propina = prop,
+            CostoEmpaque = empaque,
+            CostoDelivery = delivery,
+            Total = total,
+            UsuarioId = null
+        };
+
+        _context.Facturas.Add(factura);
+        await _context.SaveChangesAsync();
+
+        foreach (var d in pedido.PedidoDetalles)
+        {
+            _context.FacturaDetalles.Add(new FacturaDetalle
+            {
+                FacturaId = factura.FacturaId,
+                ProductoId = d.ProductoId,
+                Cantidad = d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                TotalLinea = d.Cantidad * d.PrecioUnitario
+            });
         }
 
-        // POST: Facturas/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("FacturaId,NumeroFactura,PedidoId,Fecha,Subtotal,Iva,Propina,CostoEmpaque,CostoDelivery,Total,UsuarioId")] Factura factura)
+        await _context.SaveChangesAsync();
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    public async Task<IActionResult> Edit(int id)
+    {
+        var factura = await _context.Facturas
+            .FirstOrDefaultAsync(f => f.FacturaId == id);
+
+        if (factura == null)
+            return NotFound();
+
+        return View(factura);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, [Bind("FacturaId,Propina,CostoEmpaque,CostoDelivery")] Factura factura)
+    {
+        if (id != factura.FacturaId)
+            return NotFound();
+
+        var facturaDb = await _context.Facturas.FirstOrDefaultAsync(f => f.FacturaId == id);
+        if (facturaDb == null)
+            return NotFound();
+
+        facturaDb.Propina = factura.Propina ?? 0;
+        facturaDb.CostoEmpaque = factura.CostoEmpaque ?? 0;
+        facturaDb.CostoDelivery = factura.CostoDelivery ?? 0;
+        facturaDb.Total = facturaDb.Subtotal + facturaDb.Iva +
+                          (facturaDb.Propina ?? 0) +
+                          (facturaDb.CostoEmpaque ?? 0) +
+                          (facturaDb.CostoDelivery ?? 0);
+
+        await _context.SaveChangesAsync();
+        return RedirectToAction(nameof(Index));
+    }
+
+    public async Task<IActionResult> Delete(int id)
+    {
+        var factura = await _context.Facturas
+            .Include(f => f.Pedido)
+            .FirstOrDefaultAsync(f => f.FacturaId == id);
+
+        if (factura == null)
+            return NotFound();
+
+        return View(factura);
+    }
+
+    [HttpPost, ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        var factura = await _context.Facturas
+            .Include(f => f.FacturaDetalles)
+            .FirstOrDefaultAsync(f => f.FacturaId == id);
+
+        if (factura != null)
         {
-            if (ModelState.IsValid)
-            {
-                _context.Add(factura);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["PedidoId"] = new SelectList(_context.Pedidos, "PedidoId", "PedidoId", factura.PedidoId);
-            return View(factura);
-        }
-
-        // GET: Facturas/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var factura = await _context.Facturas.FindAsync(id);
-            if (factura == null)
-            {
-                return NotFound();
-            }
-            ViewData["PedidoId"] = new SelectList(_context.Pedidos, "PedidoId", "PedidoId", factura.PedidoId);
-            return View(factura);
-        }
-
-        // POST: Facturas/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("FacturaId,NumeroFactura,PedidoId,Fecha,Subtotal,Iva,Propina,CostoEmpaque,CostoDelivery,Total,UsuarioId")] Factura factura)
-        {
-            if (id != factura.FacturaId)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(factura);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!FacturaExists(factura.FacturaId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["PedidoId"] = new SelectList(_context.Pedidos, "PedidoId", "PedidoId", factura.PedidoId);
-            return View(factura);
-        }
-
-        // GET: Facturas/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var factura = await _context.Facturas
-                .Include(f => f.Pedido)
-                .FirstOrDefaultAsync(m => m.FacturaId == id);
-            if (factura == null)
-            {
-                return NotFound();
-            }
-
-            return View(factura);
-        }
-
-        // POST: Facturas/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var factura = await _context.Facturas.FindAsync(id);
-            if (factura != null)
-            {
-                _context.Facturas.Remove(factura);
-            }
-
+            _context.FacturaDetalles.RemoveRange(factura.FacturaDetalles);
+            _context.Facturas.Remove(factura);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
         }
 
-        private bool FacturaExists(int id)
-        {
-            return _context.Facturas.Any(e => e.FacturaId == id);
-        }
+        return RedirectToAction(nameof(Index));
     }
 }

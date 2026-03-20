@@ -32,6 +32,10 @@
                 <a asp-action="Details" asp-route-id="@f.FacturaId" class="btn btn-sm btn-info">Details</a>
                 <a asp-action="Edit" asp-route-id="@f.FacturaId" class="btn btn-sm btn-primary">Edit</a>
                 <a asp-action="Delete" asp-route-id="@f.FacturaId" class="btn btn-sm btn-danger">Delete</a>
+                    <a asp-action="Pdf" asp-route-id="@f.FacturaId"
+                           class="btn btn-danger btn-sm">
+                        PDF
+                    </a>
             </td>
         </tr>
     }

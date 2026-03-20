@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using proyectoprogra.Models.Entities;
-
+using proyectoprogra.Models;
 namespace proyectoprogra.Data
 {
-    public class ApplicationDbContext : IdentityDbContext
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -18,6 +18,9 @@ namespace proyectoprogra.Data
         public DbSet<PedidoDetalle> PedidoDetalles { get; set; }
         public DbSet<Factura> Facturas { get; set; }
         public DbSet<FacturaDetalle> FacturaDetalles { get; set; }
+
+        public DbSet<UsuarioExtra> UsuariosExtra { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

@@ -120,12 +120,12 @@ function renderTabla() {
     tbody.innerHTML = "";
 
     items.forEach((item, index) => {
-        const total = item.precio * item.cantidad;
+        const total = item.precio * item.Cantidad;
 
         tbody.innerHTML += `
             <tr>
                 <td>${item.nombre}</td>
-                <td>${item.cantidad}</td>
+                <td>${item.Cantidad}</td>
                 <td>${item.precio}</td>
                 <td>${total}</td>
                 <td>

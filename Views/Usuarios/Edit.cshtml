@@ -1,0 +1,25 @@
+﻿@model proyectoprogra.Models.ApplicationUser
+
+<h2>Editar Rol</h2>
+
+<form method="post">
+
+    <input type="hidden" name="id" value="@Model.Id" />
+
+    <div class="mb-3">
+        <label>Email</label>
+        <input value="@Model.Email" class="form-control" disabled />
+    </div>
+
+    <div class="mb-3">
+        <label>Rol</label>
+        <select name="rol" class="form-control">
+            @foreach (var r in ViewBag.Roles)
+            {
+                <option value="@r">@r</option>
+            }
+        </select>
+    </div>
+
+    <button class="btn btn-success">Guardar</button>
+</form>

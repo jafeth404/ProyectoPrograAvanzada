@@ -3,16 +3,21 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using proyectoprogra.Data;
 using proyectoprogra.Models.Entities;
+using DinkToPdf;
+using DinkToPdf.Contracts;
 
 public class FacturasController : Controller
 {
     private readonly ApplicationDbContext _context;
+    private readonly IConverter _converter;
 
-    public FacturasController(ApplicationDbContext context)
+    public FacturasController(ApplicationDbContext context, IConverter converter)
     {
         _context = context;
+        _converter = converter;
     }
 
+    // 🔥 INDEX
     public async Task<IActionResult> Index()
     {
         var facturas = await _context.Facturas
@@ -22,6 +27,7 @@ public class FacturasController : Controller
         return View(facturas);
     }
 
+    // 🔥 DETAILS
     public async Task<IActionResult> Details(int id)
     {
         var factura = await _context.Facturas
@@ -36,6 +42,7 @@ public class FacturasController : Controller
         return View(factura);
     }
 
+    // 🔥 CREATE (GET)
     public async Task<IActionResult> Create(int? pedidoId)
     {
         ViewBag.Pedidos = new SelectList(
@@ -59,6 +66,7 @@ public class FacturasController : Controller
         return View(pedido);
     }
 
+    // 🔥 CREATE (POST)
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(int pedidoId, decimal? propina, decimal? costoEmpaque, decimal? costoDelivery)
@@ -131,6 +139,7 @@ public class FacturasController : Controller
         return RedirectToAction(nameof(Index));
     }
 
+    // 🔥 EDIT
     public async Task<IActionResult> Edit(int id)
     {
         var factura = await _context.Facturas
@@ -157,14 +166,15 @@ public class FacturasController : Controller
         facturaDb.CostoEmpaque = factura.CostoEmpaque ?? 0;
         facturaDb.CostoDelivery = factura.CostoDelivery ?? 0;
         facturaDb.Total = facturaDb.Subtotal + facturaDb.Iva +
-                          (facturaDb.Propina ?? 0) +
-                          (facturaDb.CostoEmpaque ?? 0) +
-                          (facturaDb.CostoDelivery ?? 0);
+                   (facturaDb.Propina ?? 0) +
+                   (facturaDb.CostoEmpaque ?? 0) +
+                   (facturaDb.CostoDelivery ?? 0);
 
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
     }
 
+    // 🔥 DELETE
     public async Task<IActionResult> Delete(int id)
     {
         var factura = await _context.Facturas
@@ -193,5 +203,36 @@ public class FacturasController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // 🔥🔥🔥 PDF
+    public async Task<IActionResult> Pdf(int id)
+    {
+        var factura = await _context.Facturas
+            .Include(f => f.FacturaDetalles)
+            .ThenInclude(fd => fd.Producto)
+            .FirstOrDefaultAsync(f => f.FacturaId == id);
+
+        if (factura == null)
+            return NotFound();
+
+        var html = await this.RenderViewAsync("FacturaPdf", factura);
+
+        var doc = new HtmlToPdfDocument()
+        {
+            GlobalSettings = {
+                PaperSize = PaperKind.A4
+            },
+            Objects = {
+                new ObjectSettings()
+                {
+                    HtmlContent = html
+                }
+            }
+        };
+
+        var pdf = _converter.Convert(doc);
+
+        return File(pdf, "application/pdf");
     }
 }

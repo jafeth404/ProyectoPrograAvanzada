@@ -1,39 +1,69 @@
 ﻿@model proyectoprogra.Models.Entities.Categoria
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Nueva Categoría";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Create</h1>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<h4>Categoria</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="Codigo" class="control-label"></label>
-                <input asp-for="Codigo" class="form-control" />
-                <span asp-validation-for="Codigo" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Descripcion" class="control-label"></label>
-                <input asp-for="Descripcion" class="form-control" />
-                <span asp-validation-for="Descripcion" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+    <!-- 🔥 TÍTULO -->
+    <div class="mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-plus-circle me-2 text-primary"></i>
+            Nueva Categoría
+        </h4>
+        <p class="text-muted">Completa la información para registrar una nueva categoría</p>
     </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
+    <!-- 🔥 FORM CARD -->
+    <div class="card">
+        <div class="card-body">
+
+            <form asp-action="Create">
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <div class="row">
+
+                    <!-- Código -->
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Codigo" class="form-label fw-semibold"></label>
+                        <input asp-for="Codigo" class="form-control" placeholder="Ej: CAT001" />
+                        <span asp-validation-for="Codigo" class="text-danger"></span>
+                    </div>
+
+                    <!-- Descripción -->
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Descripcion" class="form-label fw-semibold"></label>
+                        <input asp-for="Descripcion" class="form-control" placeholder="Ej: Bebidas, Postres..." />
+                        <span asp-validation-for="Descripcion" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+                <!-- 🔥 BOTONES -->
+                <div class="mt-4 d-flex gap-2">
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bx bx-save me-1"></i> Guardar
+                    </button>
+
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bx bx-arrow-back me-1"></i> Volver
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

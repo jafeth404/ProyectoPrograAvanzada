@@ -1,70 +1,123 @@
 ﻿@model proyectoprogra.Models.Entities.Producto
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Editar Producto";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Edit</h1>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<h4>Producto</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="ProductoId" />
-            <div class="form-group">
-                <label asp-for="Codigo" class="control-label"></label>
-                <input asp-for="Codigo" class="form-control" />
-                <span asp-validation-for="Codigo" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Nombre" class="control-label"></label>
-                <input asp-for="Nombre" class="form-control" />
-                <span asp-validation-for="Nombre" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CategoriaId" class="control-label"></label>
-                <select asp-for="CategoriaId" class="form-control" asp-items="ViewBag.CategoriaId"></select>
-                <span asp-validation-for="CategoriaId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Precio" class="control-label"></label>
-                <input asp-for="Precio" class="form-control" />
-                <span asp-validation-for="Precio" class="text-danger"></span>
-            </div>
-            <div class="form-group form-check">
-                <label class="form-check-label">
-                    <input class="form-check-input" asp-for="RequiereEmpaque" /> @Html.DisplayNameFor(model => model.RequiereEmpaque)
-                </label>
-            </div>
-            <div class="form-group">
-                <label asp-for="CostoEmpaque" class="control-label"></label>
-                <input asp-for="CostoEmpaque" class="form-control" />
-                <span asp-validation-for="CostoEmpaque" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Stock" class="control-label"></label>
-                <input asp-for="Stock" class="form-control" />
-                <span asp-validation-for="Stock" class="text-danger"></span>
-            </div>
-            <div class="form-group form-check">
-                <label class="form-check-label">
-                    <input class="form-check-input" asp-for="Activo" /> @Html.DisplayNameFor(model => model.Activo)
-                </label>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+    <!-- 🔥 TÍTULO -->
+    <div class="mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-edit-alt me-2 text-warning"></i>
+            Editar Producto
+        </h4>
+        <p class="text-muted">Modifica la información del producto</p>
     </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
+    <!-- 🔥 CARD -->
+    <div class="card">
+        <div class="card-body">
+
+            <form asp-action="Edit">
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <input type="hidden" asp-for="ProductoId" />
+
+                <div class="row">
+
+                    <!-- Código -->
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Codigo" class="form-label fw-semibold"></label>
+                        <input asp-for="Codigo" class="form-control" />
+                        <span asp-validation-for="Codigo" class="text-danger"></span>
+                    </div>
+
+                    <!-- Nombre -->
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Nombre" class="form-label fw-semibold"></label>
+                        <input asp-for="Nombre" class="form-control" />
+                        <span asp-validation-for="Nombre" class="text-danger"></span>
+                    </div>
+
+                    <!-- Categoría -->
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="CategoriaId" class="form-label fw-semibold"></label>
+                        <select asp-for="CategoriaId" class="form-select" asp-items="ViewBag.CategoriaId">
+                        </select>
+                        <span asp-validation-for="CategoriaId" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <!-- Precio -->
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="Precio" class="form-label fw-semibold"></label>
+                        <input asp-for="Precio" class="form-control" />
+                        <span asp-validation-for="Precio" class="text-danger"></span>
+                    </div>
+
+                    <!-- Stock -->
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="Stock" class="form-label fw-semibold"></label>
+                        <input asp-for="Stock" class="form-control" />
+                        <span asp-validation-for="Stock" class="text-danger"></span>
+                    </div>
+
+                    <!-- Costo Empaque -->
+                    <div class="col-md-3 mb-3">
+                        <label asp-for="CostoEmpaque" class="form-label fw-semibold"></label>
+                        <input asp-for="CostoEmpaque" class="form-control" />
+                        <span asp-validation-for="CostoEmpaque" class="text-danger"></span>
+                    </div>
+
+                    <!-- Switches -->
+                    <div class="col-md-3 d-flex flex-column justify-content-center">
+
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" asp-for="RequiereEmpaque" id="chkEmpaqueEdit" />
+                            <label class="form-check-label" for="chkEmpaqueEdit">
+                                Requiere Empaque
+                            </label>
+                        </div>
+
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" asp-for="Activo" />
+                            <label class="form-check-label">
+                                Activo
+                            </label>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- 🔥 BOTONES -->
+                <div class="mt-4 d-flex gap-2">
+
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bx bx-save me-1"></i> Guardar Cambios
+                    </button>
+
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bx bx-arrow-back me-1"></i> Cancelar
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

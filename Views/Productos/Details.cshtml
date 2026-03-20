@@ -1,67 +1,129 @@
 ﻿@model proyectoprogra.Models.Entities.Producto
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Detalle Producto";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Details</h1>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<div>
-    <h4>Producto</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Codigo)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Codigo)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Nombre)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Nombre)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Precio)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Precio)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.RequiereEmpaque)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.RequiereEmpaque)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CostoEmpaque)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CostoEmpaque)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Stock)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Stock)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Activo)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Activo)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Categoria)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Categoria.CategoriaId)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.ProductoId">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+    <!-- 🔥 HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold">
+                <i class="bx bx-detail me-2 text-primary"></i>
+                Detalle del Producto
+            </h4>
+            <p class="text-muted mb-0">Información completa del producto</p>
+        </div>
+
+        <div>
+            <a asp-action="Edit" asp-route-id="@Model.ProductoId" class="btn btn-warning me-2">
+                <i class="bx bx-edit me-1"></i> Editar
+            </a>
+
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bx bx-arrow-back me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <!-- 🔥 CARD -->
+    <div class="card">
+        <div class="card-body">
+
+            <div class="row">
+
+                <!-- Código -->
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Código</label>
+                    <div class="form-control bg-light">
+                        <span class="badge bg-label-primary">@Model.Codigo</span>
+                    </div>
+                </div>
+
+                <!-- Nombre -->
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Nombre</label>
+                    <div class="form-control bg-light">
+                        <strong>@Model.Nombre</strong>
+                    </div>
+                </div>
+
+                <!-- Categoría -->
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Categoría</label>
+                    <div class="form-control bg-light">
+                        @Model.Categoria?.Descripcion
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="row">
+
+                <!-- Precio -->
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Precio</label>
+                    <div class="form-control bg-light">
+                        ₡ @Model.Precio.ToString("N2")
+                    </div>
+                </div>
+
+                <!-- Stock -->
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Stock</label>
+                    <div class="form-control bg-light">
+                        @if (Model.Stock > 10)
+                        {
+                            <span class="badge bg-label-success">@Model.Stock</span>
+                        }
+                        else if (Model.Stock > 0)
+                        {
+                            <span class="badge bg-label-warning">@Model.Stock</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-label-danger">0</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Empaque -->
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Empaque</label>
+                    <div class="form-control bg-light">
+                        @if (Model.RequiereEmpaque)
+                        {
+                            <span class="badge bg-label-info">
+                                Sí (₡ @(Model.CostoEmpaque?.ToString("N2") ?? "0.00"))
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-label-secondary">No</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Estado -->
+                <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Estado</label>
+                    <div class="form-control bg-light">
+                        @if (Model.Activo)
+                        {
+                            <span class="badge bg-label-success">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-label-danger">Inactivo</span>
+                        }
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
 </div>

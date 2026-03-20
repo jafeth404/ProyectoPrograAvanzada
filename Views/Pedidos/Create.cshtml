@@ -3,72 +3,139 @@
     var productos = ViewData["Productos"] as List<proyectoprogra.Models.Entities.Producto>;
 }
 
-<h2>Crear Pedido</h2>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<form asp-action="Create" method="post">
-    <div class="mb-3">
-        <label>Tipo de Pedido</label>
-        <select name="TipoPedido" class="form-control">
-            <option value="">Seleccione tipo</option>
-            <option value="Mesa">Mesa</option>
-            <option value="Delivery">Delivery</option>
-            <option value="Pickup">Pickup</option>
-        </select>
+    <!-- 🔥 HEADER -->
+    <div class="mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-cart-add me-2 text-primary"></i>
+            Nuevo Pedido
+        </h4>
+        <p class="text-muted">Agrega productos y crea un pedido</p>
     </div>
 
-    <div class="mb-3">
-        <label>Mesa</label>
-        <select name="MesaId" asp-items="ViewBag.MesaId" class="form-control"></select>
-    </div>
+    <form asp-action="Create" method="post">
 
-    <hr />
+        <!-- 🔥 DATOS GENERALES -->
+        <div class="card mb-4">
+            <div class="card-body">
 
-    <h4>Agregar Producto</h4>
+                <div class="row">
 
-    <div class="row">
-        <div class="col">
-            <select id="productoSelect" class="form-control">
-                <option value="">Seleccione producto</option>
-                @foreach (var p in productos)
-                {
-                    <option value="@p.ProductoId">@p.Nombre (@p.Precio)</option>
-                }
-            </select>
+                    <!-- Tipo -->
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Tipo de Pedido</label>
+                        <select name="TipoPedido" class="form-select">
+                            <option value="">Seleccione tipo</option>
+                            <option value="Mesa">Mesa</option>
+                            <option value="Delivery">Delivery</option>
+                            <option value="Pickup">Pickup</option>
+                        </select>
+                    </div>
+
+                    <!-- Mesa -->
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">Mesa</label>
+                        <select name="MesaId" asp-items="ViewBag.MesaId" class="form-select"></select>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
 
-        <div class="col">
-            <input type="number" id="cantidadInput" class="form-control" placeholder="Cantidad" />
+        <!-- 🔥 AGREGAR PRODUCTOS -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bx bx-plus-circle me-2"></i>Agregar Producto</h5>
+            </div>
+
+            <div class="card-body">
+
+                <div class="row align-items-end">
+
+                    <!-- Producto -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Producto</label>
+                        <select id="productoSelect" class="form-select">
+                            <option value="">Seleccione producto</option>
+                            @foreach (var p in productos)
+                            {
+                                <option value="@p.ProductoId">
+                                    @p.Nombre - ₡ @p.Precio
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Cantidad -->
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Cantidad</label>
+                        <input type="number" id="cantidadInput" class="form-control" placeholder="Cantidad" />
+                    </div>
+
+                    <!-- Botón -->
+                    <div class="col-md-3 mb-3">
+                        <button type="button" class="btn btn-primary w-100" onclick="agregarProducto()">
+                            <i class="bx bx-plus"></i> Agregar
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
 
-        <div class="col">
-            <button type="button" class="btn btn-primary" onclick="agregarProducto()">Agregar</button>
+        <!-- 🔥 DETALLE -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="bx bx-list-ul me-2"></i>Detalle del Pedido</h5>
+            </div>
+
+            <div class="card-body table-responsive">
+
+                <table class="table table-hover align-middle" id="tabla">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <div class="text-end mt-3">
+                    <h5>Total: ₡ <span id="total">0.00</span></h5>
+                </div>
+
+            </div>
         </div>
-    </div>
 
-    <hr />
+        <input type="hidden" name="ItemsJson" id="ItemsJson" />
 
-    <h4>Detalle del Pedido</h4>
+        <!-- 🔥 BOTONES -->
+        <div class="d-flex gap-2">
 
-    <table class="table" id="tabla">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+            <button type="submit" class="btn btn-success">
+                <i class="bx bx-save me-1"></i> Guardar Pedido
+            </button>
 
-    <input type="hidden" name="ItemsJson" id="ItemsJson" />
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="bx bx-arrow-back me-1"></i> Cancelar
+            </a>
 
-    <button type="submit" class="btn btn-success">Guardar Pedido</button>
+        </div>
 
-</form>
+    </form>
+
+</div>
 
 @section Scripts {
+
     <script>
         let items = [];
+        let total = 0;
 
         function agregarProducto() {
             const select = document.getElementById("productoSelect");
@@ -78,10 +145,13 @@
 
             if (!productoId || cantidad <= 0) return;
 
+            const precio = parseFloat(productoText.split("₡")[1]);
+
             items.push({
                 ProductoId: parseInt(productoId),
                 Cantidad: parseInt(cantidad),
-                Nombre: productoText
+                Nombre: productoText,
+                Precio: precio
             });
 
             renderTabla();
@@ -95,18 +165,29 @@
         function renderTabla() {
             const tbody = document.querySelector("#tabla tbody");
             tbody.innerHTML = "";
+            total = 0;
 
             items.forEach((item, index) => {
+
+                const subtotal = item.Cantidad * item.Precio;
+                total += subtotal;
+
                 tbody.innerHTML += `
                     <tr>
                         <td>${item.Nombre}</td>
                         <td>${item.Cantidad}</td>
-                        <td><button type="button" onclick="eliminar(${index})">X</button></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-danger" onclick="eliminar(${index})">
+                                <i class="bx bx-trash"></i>
+                            </button>
+                        </td>
                     </tr>
                 `;
             });
 
             document.getElementById("ItemsJson").value = JSON.stringify(items);
+            document.getElementById("total").innerText = total.toFixed(2);
         }
     </script>
+
 }

@@ -1,50 +1,101 @@
 ﻿@model proyectoprogra.Models.Entities.Pedido
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Editar Pedido";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Edit</h1>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<h4>Pedido</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="PedidoId" />
-            <div class="form-group">
-                <label asp-for="TipoPedido" class="control-label"></label>
-                <input asp-for="TipoPedido" class="form-control" />
-                <span asp-validation-for="TipoPedido" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="MesaId" class="control-label"></label>
-                <select asp-for="MesaId" class="form-control" asp-items="ViewBag.MesaId"></select>
-                <span asp-validation-for="MesaId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Fecha" class="control-label"></label>
-                <input asp-for="Fecha" class="form-control" />
-                <span asp-validation-for="Fecha" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Estado" class="control-label"></label>
-                <input asp-for="Estado" class="form-control" />
-                <span asp-validation-for="Estado" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+    <!-- 🔥 HEADER -->
+    <div class="mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-edit-alt me-2 text-warning"></i>
+            Editar Pedido
+        </h4>
+        <p class="text-muted">Modifica la información del pedido</p>
     </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
+    <!-- 🔥 CARD -->
+    <div class="card">
+        <div class="card-body">
+
+            <form asp-action="Edit">
+
+                <input type="hidden" asp-for="PedidoId" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <div class="row">
+
+                    <!-- Tipo de Pedido -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Tipo de Pedido</label>
+                        <select asp-for="TipoPedido" class="form-select">
+                            <option value="">Seleccione</option>
+                            <option value="Mesa">🍽️ Mesa</option>
+                            <option value="Delivery">🚚 Delivery</option>
+                            <option value="Pickup">📦 Pickup</option>
+                        </select>
+                        <span asp-validation-for="TipoPedido" class="text-danger"></span>
+                    </div>
+
+                    <!-- Mesa -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Mesa</label>
+                        <select asp-for="MesaId" class="form-select" asp-items="ViewBag.MesaId">
+                            <option value="">Seleccione una mesa</option>
+                        </select>
+                        <span asp-validation-for="MesaId" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+                <div class="row">
+
+                    <!-- Fecha -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Fecha</label>
+                        <input asp-for="Fecha" type="datetime-local" class="form-control" />
+                        <span asp-validation-for="Fecha" class="text-danger"></span>
+                    </div>
+
+                    <!-- Estado -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Estado</label>
+                        <select asp-for="Estado" class="form-select">
+                            <option value="Pendiente">🟡 Pendiente</option>
+                            <option value="EnProceso">🔵 En Proceso</option>
+                            <option value="Completado">🟢 Completado</option>
+                            <option value="Cancelado">🔴 Cancelado</option>
+                        </select>
+                        <span asp-validation-for="Estado" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+                <!-- 🔥 BOTONES -->
+                <div class="mt-4 d-flex gap-2">
+
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bx bx-save me-1"></i> Guardar Cambios
+                    </button>
+
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bx bx-arrow-back me-1"></i> Cancelar
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

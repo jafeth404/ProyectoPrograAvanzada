@@ -1,54 +1,168 @@
 ﻿@model IEnumerable<proyectoprogra.Models.Entities.Pedido>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Pedidos";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Index</h1>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.TipoPedido)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Fecha)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Estado)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Mesa)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.TipoPedido)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Fecha)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Estado)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Mesa.MesaId)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.PedidoId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.PedidoId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.PedidoId">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+    <!-- 🔥 HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-receipt me-2 text-primary"></i>
+            Gestión de Pedidos
+        </h4>
+
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bx bx-plus"></i> Nuevo Pedido
+        </a>
+    </div>
+
+    <!-- 🔥 RESUMEN RÁPIDO -->
+    <div class="row mb-4">
+
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bx bx-time fs-2 text-warning"></i>
+                    <h5 class="mt-2">Pendientes</h5>
+                    <span class="fw-bold">
+                        @Model.Count(p => p.Estado == "Pendiente")
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bx bx-restaurant fs-2 text-info"></i>
+                    <h5 class="mt-2">En Proceso</h5>
+                    <span class="fw-bold">
+                        @Model.Count(p => p.Estado == "EnProceso")
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <i class="bx bx-check-circle fs-2 text-success"></i>
+                    <h5 class="mt-2">Completados</h5>
+                    <span class="fw-bold">
+                        @Model.Count(p => p.Estado == "Completado")
+                    </span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 🔥 TABLA -->
+    <div class="card">
+        <div class="table-responsive text-nowrap">
+
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Mesa</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <!-- Tipo -->
+                            <td>
+                                @if (item.TipoPedido == "Mesa")
+                                {
+                                    <span class="badge bg-label-primary">
+                                        <i class="bx bx-table"></i> Mesa
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-label-info">
+                                        <i class="bx bx-package"></i> Para llevar
+                                    </span>
+                                }
+                            </td>
+
+                            <!-- Fecha -->
+                            <td>
+                                <i class="bx bx-calendar me-1"></i>
+                                @item.Fecha.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+
+                            <!-- Estado -->
+                            <td>
+                                @if (item.Estado == "Pendiente")
+                                {
+                                    <span class="badge bg-label-warning">Pendiente</span>
+                                }
+                                else if (item.Estado == "EnProceso")
+                                {
+                                    <span class="badge bg-label-info">En Proceso</span>
+                                }
+                                else if (item.Estado == "Completado")
+                                {
+                                    <span class="badge bg-label-success">Completado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-label-secondary">@item.Estado</span>
+                                }
+                            </td>
+
+                            <!-- Mesa -->
+                            <td>
+                                @if (item.Mesa != null)
+                                {
+                                    <span class="badge bg-label-primary">
+                                        Mesa @item.Mesa.NumeroMesa
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">N/A</span>
+                                }
+                            </td>
+
+                            <!-- Acciones -->
+                            <td class="text-center">
+
+                                <a asp-action="Edit" asp-route-id="@item.PedidoId"
+                                   class="btn btn-sm btn-outline-warning me-1">
+                                    <i class="bx bx-edit"></i>
+                                </a>
+
+                                <a asp-action="Details" asp-route-id="@item.PedidoId"
+                                   class="btn btn-sm btn-outline-info me-1">
+                                    <i class="bx bx-show"></i>
+                                </a>
+
+                                <a asp-action="Delete" asp-route-id="@item.PedidoId"
+                                   class="btn btn-sm btn-outline-danger">
+                                    <i class="bx bx-trash"></i>
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+
+</div>

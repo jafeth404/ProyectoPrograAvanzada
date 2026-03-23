@@ -1,193 +1,160 @@
 ﻿@{
     ViewData["Title"] = "Crear Pedido";
-    var productos = ViewData["Productos"] as List<proyectoprogra.Models.Entities.Producto>;
 }
 
-<div class="container-xxl flex-grow-1 container-p-y">
+<h1>Crear Pedido</h1>
 
-    <!-- 🔥 HEADER -->
-    <div class="mb-4">
-        <h4 class="fw-bold">
-            <i class="bx bx-cart-add me-2 text-primary"></i>
-            Nuevo Pedido
-        </h4>
-        <p class="text-muted">Agrega productos y crea un pedido</p>
+<div asp-validation-summary="All" class="text-danger"></div>
+
+<form asp-action="Create" method="post" id="pedidoForm">
+
+    <div class="card p-4 mb-4">
+
+        <div class="mb-3">
+            <label>Tipo Pedido</label>
+            <input name="TipoPedido" class="form-control" required />
+        </div>
+
+        <div class="mb-3">
+            <label>Mesa</label>
+            <select name="MesaId" class="form-control" asp-items="ViewBag.MesaId"></select>
+        </div>
+
+        <div class="mb-3">
+            <label>Estado</label>
+            <select name="Estado" class="form-control">
+                <option value="Pendiente">Pendiente</option>
+                <option value="En proceso">En proceso</option>
+                <option value="Completo">Completo</option>
+            </select>
+        </div>
+
     </div>
 
-    <form asp-action="Create" method="post">
+    <!-- AGREGAR PRODUCTOS -->
+    <div class="card p-4 mb-4">
+        <h4>Agregar Producto</h4>
 
-        <!-- 🔥 DATOS GENERALES -->
-        <div class="card mb-4">
-            <div class="card-body">
+        <div class="row">
+            <div class="col-md-5">
+                <select id="productoSelect" class="form-control">
+                    <option value="" disabled selected>Seleccione producto</option>
+                    @foreach (var p in ViewBag.Productos)
+                    {
+                        <option value="@p.ProductoId" data-precio="@p.Precio">
+                            @p.Nombre (@p.Precio)
+                        </option>
+                    }
+                </select>
+            </div>
 
-                <div class="row">
+            <div class="col-md-3">
+                <input type="number" id="cantidadInput" class="form-control" placeholder="Cantidad" min="1" />
+            </div>
 
-                    <!-- Tipo -->
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Tipo de Pedido</label>
-                        <select name="TipoPedido" class="form-select">
-                            <option value="">Seleccione tipo</option>
-                            <option value="Mesa">Mesa</option>
-                            <option value="Delivery">Delivery</option>
-                            <option value="Pickup">Pickup</option>
-                        </select>
-                    </div>
-
-                    <!-- Mesa -->
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label fw-semibold">Mesa</label>
-                        <select name="MesaId" asp-items="ViewBag.MesaId" class="form-select"></select>
-                    </div>
-
-                </div>
-
+            <div class="col-md-2">
+                <button type="button" class="btn btn-primary" onclick="agregarProducto()">Agregar</button>
             </div>
         </div>
+    </div>
 
-        <!-- 🔥 AGREGAR PRODUCTOS -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="bx bx-plus-circle me-2"></i>Agregar Producto</h5>
-            </div>
+    <!-- TABLA -->
+    <div class="card p-4">
+        <h4>Detalle del Pedido</h4>
 
-            <div class="card-body">
+        <table class="table" id="detalleTable">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
-                <div class="row align-items-end">
+    <input type="hidden" id="ItemsJson" name="ItemsJson" value="[]" />
 
-                    <!-- Producto -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Producto</label>
-                        <select id="productoSelect" class="form-select">
-                            <option value="">Seleccione producto</option>
-                            @foreach (var p in productos)
-                            {
-                                <option value="@p.ProductoId">
-                                    @p.Nombre - ₡ @p.Precio
-                                </option>
-                            }
-                        </select>
-                    </div>
+    <button type="submit" class="btn btn-success mt-3">Guardar Pedido</button>
+</form>
 
-                    <!-- Cantidad -->
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Cantidad</label>
-                        <input type="number" id="cantidadInput" class="form-control" placeholder="Cantidad" />
-                    </div>
+<script>
+let items = [];
 
-                    <!-- Botón -->
-                    <div class="col-md-3 mb-3">
-                        <button type="button" class="btn btn-primary w-100" onclick="agregarProducto()">
-                            <i class="bx bx-plus"></i> Agregar
-                        </button>
-                    </div>
+function agregarProducto() {
+    const select = document.getElementById("productoSelect");
+    const cantidad = parseInt(document.getElementById("cantidadInput").value);
 
-                </div>
+    if (!select.value || cantidad <= 0) {
+        alert("Seleccione producto y cantidad válida");
+        return;
+    }
 
-            </div>
-        </div>
+    const id = parseInt(select.value);
+    const nombre = select.options[select.selectedIndex].text;
+    const precio = parseFloat(select.options[select.selectedIndex].dataset.precio);
 
-        <!-- 🔥 DETALLE -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5><i class="bx bx-list-ul me-2"></i>Detalle del Pedido</h5>
-            </div>
+    items.push({
+        ProductoId: id,
+        nombre: nombre,
+        precio: precio,
+        Cantidad: cantidad
+    });
 
-            <div class="card-body table-responsive">
+    renderTabla();
 
-                <table class="table table-hover align-middle" id="tabla">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Producto</th>
-                            <th>Cantidad</th>
-                            <th class="text-center">Acción</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-
-                <div class="text-end mt-3">
-                    <h5>Total: ₡ <span id="total">0.00</span></h5>
-                </div>
-
-            </div>
-        </div>
-
-        <input type="hidden" name="ItemsJson" id="ItemsJson" />
-
-        <!-- 🔥 BOTONES -->
-        <div class="d-flex gap-2">
-
-            <button type="submit" class="btn btn-success">
-                <i class="bx bx-save me-1"></i> Guardar Pedido
-            </button>
-
-            <a asp-action="Index" class="btn btn-outline-secondary">
-                <i class="bx bx-arrow-back me-1"></i> Cancelar
-            </a>
-
-        </div>
-
-    </form>
-
-</div>
-
-@section Scripts {
-
-    <script>
-        let items = [];
-        let total = 0;
-
-        function agregarProducto() {
-            const select = document.getElementById("productoSelect");
-            const productoId = select.value;
-            const productoText = select.options[select.selectedIndex].text;
-            const cantidad = document.getElementById("cantidadInput").value;
-
-            if (!productoId || cantidad <= 0) return;
-
-            const precio = parseFloat(productoText.split("₡")[1]);
-
-            items.push({
-                ProductoId: parseInt(productoId),
-                Cantidad: parseInt(cantidad),
-                Nombre: productoText,
-                Precio: precio
-            });
-
-            renderTabla();
-        }
-
-        function eliminar(index) {
-            items.splice(index, 1);
-            renderTabla();
-        }
-
-        function renderTabla() {
-            const tbody = document.querySelector("#tabla tbody");
-            tbody.innerHTML = "";
-            total = 0;
-
-            items.forEach((item, index) => {
-
-                const subtotal = item.Cantidad * item.Precio;
-                total += subtotal;
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${item.Nombre}</td>
-                        <td>${item.Cantidad}</td>
-                        <td class="text-center">
-                            <button type="button" class="btn btn-sm btn-danger" onclick="eliminar(${index})">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            document.getElementById("ItemsJson").value = JSON.stringify(items);
-            document.getElementById("total").innerText = total.toFixed(2);
-        }
-    </script>
-
+    select.value = "";
+    document.getElementById("cantidadInput").value = "";
 }
+
+function eliminarItem(index) {
+    items.splice(index, 1);
+    renderTabla();
+}
+
+function renderTabla() {
+    const tbody = document.querySelector("#detalleTable tbody");
+    tbody.innerHTML = "";
+
+    items.forEach((item, index) => {
+        const total = item.precio * item.Cantidad;
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.nombre}</td>
+                <td>${item.Cantidad}</td>
+                <td>${item.precio}</td>
+                <td>${total}</td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="eliminarItem(${index})">X</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function beforeSubmit() {
+    if (items.length === 0) {
+        alert("Debe agregar al menos un producto");
+        return false;
+    }
+
+    document.getElementById("ItemsJson").value = JSON.stringify(items);
+    return true;
+}
+document.getElementById("pedidoForm").addEventListener("submit", function (e) {
+
+    if (items.length === 0) {
+        alert("Debe agregar al menos un producto");
+        e.preventDefault();
+        return;
+    }
+
+    document.getElementById("ItemsJson").value = JSON.stringify(items);
+
+    console.log("ENVIANDO:", items);
+});
+</script>

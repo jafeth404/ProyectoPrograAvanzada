@@ -1,101 +1,128 @@
 ﻿@model proyectoprogra.Models.Entities.Pedido
 
-@{
-    ViewData["Title"] = "Editar Pedido";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-}
+<h1>Editar Pedido</h1>
 
-<div class="container-xxl flex-grow-1 container-p-y">
+<form asp-action="Edit" method="post" id="editForm">
 
-    <!-- 🔥 HEADER -->
-    <div class="mb-4">
-        <h4 class="fw-bold">
-            <i class="bx bx-edit-alt me-2 text-warning"></i>
-            Editar Pedido
-        </h4>
-        <p class="text-muted">Modifica la información del pedido</p>
-    </div>
+    <input type="hidden" asp-for="PedidoId" />
+    <input type="hidden" id="ItemsJson" name="ItemsJson" />
 
-    <!-- 🔥 CARD -->
-    <div class="card">
-        <div class="card-body">
+    <div class="card p-4 mb-4">
 
-            <form asp-action="Edit">
-
-                <input type="hidden" asp-for="PedidoId" />
-
-                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-
-                <div class="row">
-
-                    <!-- Tipo de Pedido -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Tipo de Pedido</label>
-                        <select asp-for="TipoPedido" class="form-select">
-                            <option value="">Seleccione</option>
-                            <option value="Mesa">🍽️ Mesa</option>
-                            <option value="Delivery">🚚 Delivery</option>
-                            <option value="Pickup">📦 Pickup</option>
-                        </select>
-                        <span asp-validation-for="TipoPedido" class="text-danger"></span>
-                    </div>
-
-                    <!-- Mesa -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Mesa</label>
-                        <select asp-for="MesaId" class="form-select" asp-items="ViewBag.MesaId">
-                            <option value="">Seleccione una mesa</option>
-                        </select>
-                        <span asp-validation-for="MesaId" class="text-danger"></span>
-                    </div>
-
-                </div>
-
-                <div class="row">
-
-                    <!-- Fecha -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Fecha</label>
-                        <input asp-for="Fecha" type="datetime-local" class="form-control" />
-                        <span asp-validation-for="Fecha" class="text-danger"></span>
-                    </div>
-
-                    <!-- Estado -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Estado</label>
-                        <select asp-for="Estado" class="form-select">
-                            <option value="Pendiente">🟡 Pendiente</option>
-                            <option value="EnProceso">🔵 En Proceso</option>
-                            <option value="Completado">🟢 Completado</option>
-                            <option value="Cancelado">🔴 Cancelado</option>
-                        </select>
-                        <span asp-validation-for="Estado" class="text-danger"></span>
-                    </div>
-
-                </div>
-
-                <!-- 🔥 BOTONES -->
-                <div class="mt-4 d-flex gap-2">
-
-                    <button type="submit" class="btn btn-warning">
-                        <i class="bx bx-save me-1"></i> Guardar Cambios
-                    </button>
-
-                    <a asp-action="Index" class="btn btn-outline-secondary">
-                        <i class="bx bx-arrow-back me-1"></i> Cancelar
-                    </a>
-
-                </div>
-
-            </form>
-
+        <div class="mb-3">
+            <label>Tipo Pedido</label>
+            <input asp-for="TipoPedido" class="form-control" />
         </div>
+
+        <div class="mb-3">
+            <label>Mesa</label>
+            <select asp-for="MesaId" class="form-control" asp-items="ViewBag.MesaId"></select>
+        </div>
+
+        <div class="mb-3">
+            <label>Estado</label>
+            <select asp-for="Estado" class="form-control">
+                <option>Pendiente</option>
+                <option>En proceso</option>
+                <option>Completo</option>
+            </select>
+        </div>
+
     </div>
 
-</div>
+    <!-- AGREGAR PRODUCTO -->
+    <div class="card p-4 mb-4">
+        <h4>Agregar Producto</h4>
 
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+        <select id="productoSelect" class="form-control mb-2">
+            <option value="">Seleccione producto</option>
+            @foreach (var p in ViewBag.Productos)
+            {
+                <option value="@p.ProductoId" data-precio="@p.Precio">
+                    @p.Nombre (@p.Precio)
+                </option>
+            }
+        </select>
+
+        <input type="number" id="cantidadInput" class="form-control mb-2" placeholder="Cantidad" />
+
+        <button type="button" class="btn btn-primary" onclick="agregarProducto()">Agregar</button>
+    </div>
+
+    <!-- TABLA -->
+    <div class="card p-4">
+        <h4>Detalle del Pedido</h4>
+
+        <table class="table" id="detalleTable">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in Model.PedidoDetalles)
+                {
+                    <tr data-id="@d.ProductoId" data-precio="@d.PrecioUnitario">
+                        <td>@d.Producto.Nombre</td>
+                        <td>@d.Cantidad</td>
+                        <td>@d.PrecioUnitario</td>
+                        <td>@(d.Cantidad * d.PrecioUnitario)</td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">X</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-success mt-3">Guardar</button>
+</form>
+
+<script>
+function agregarProducto() {
+    const select = document.getElementById("productoSelect");
+    const cantidad = parseInt(document.getElementById("cantidadInput").value);
+
+    if (!select.value || cantidad <= 0) return;
+
+    const nombre = select.options[select.selectedIndex].text;
+    const precio = parseFloat(select.options[select.selectedIndex].dataset.precio);
+
+    const row = `
+        <tr data-id="${select.value}" data-precio="${precio}">
+            <td>${nombre}</td>
+            <td>${cantidad}</td>
+            <td>${precio}</td>
+            <td>${precio * cantidad}</td>
+            <td><button type="button" onclick="this.closest('tr').remove()">X</button></td>
+        </tr>
+    `;
+
+    document.querySelector("#detalleTable tbody").innerHTML += row;
+
+    select.value = "";
+    document.getElementById("cantidadInput").value = "";
 }
+
+document.getElementById("editForm").addEventListener("submit", function () {
+
+    let items = [];
+
+    document.querySelectorAll("#detalleTable tbody tr").forEach(row => {
+        const id = parseInt(row.dataset.id);
+        const cantidad = parseInt(row.children[1].innerText);
+
+        items.push({
+            ProductoId: id,
+            Cantidad: cantidad
+        });
+    });
+
+    document.getElementById("ItemsJson").value = JSON.stringify(items);
+});
+</script>

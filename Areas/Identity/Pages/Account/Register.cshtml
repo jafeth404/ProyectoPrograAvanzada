@@ -1,127 +1,88 @@
 ﻿@page
 @model RegisterModel
-
 @{
-    ViewData["Title"] = "Crear Cuenta";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Registro";
 }
 
-<div class="container-xxl flex-grow-1 container-p-y">
+<h1>Registro</h1>
 
-    <div class="authentication-wrapper authentication-basic">
-        <div class="authentication-inner">
+<div class="row">
+    <div class="col-md-6">
+        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
 
-            <!-- 🔥 CARD -->
-            <div class="card shadow-sm">
-                <div class="card-body">
+            <h4>Crear una nueva cuenta</h4>
+            <hr />
 
-                    <!-- 🔥 LOGO / TITULO -->
-                    <div class="text-center mb-4">
-                        <i class="bx bx-user-plus text-success" style="font-size: 60px;"></i>
-                        <h4 class="mt-2 fw-bold">Crear Cuenta</h4>
-                        <p class="text-muted">Regístrate para comenzar a usar RestauranteApp</p>
-                    </div>
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-                    <!-- 🔥 FORM -->
-                    <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-
-                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-
-                        <!-- EMAIL -->
-                        <div class="mb-3">
-                            <label asp-for="Input.Email" class="form-label">Correo</label>
-                            <div class="input-group input-group-merge">
-                                <span class="input-group-text"><i class="bx bx-envelope"></i></span>
-                                <input asp-for="Input.Email" class="form-control"
-                                       placeholder="correo@ejemplo.com" autocomplete="username" />
-                            </div>
-                            <span asp-validation-for="Input.Email" class="text-danger"></span>
-                        </div>
-
-                        <!-- PASSWORD -->
-                        <div class="mb-3">
-                            <label asp-for="Input.Password" class="form-label">Contraseña</label>
-                            <div class="input-group input-group-merge">
-                                <span class="input-group-text"><i class="bx bx-lock"></i></span>
-                                <input asp-for="Input.Password" class="form-control"
-                                       placeholder="••••••••" autocomplete="new-password" />
-                            </div>
-                            <span asp-validation-for="Input.Password" class="text-danger"></span>
-                        </div>
-
-                        <!-- CONFIRM PASSWORD -->
-                        <div class="mb-3">
-                            <label asp-for="Input.ConfirmPassword" class="form-label">Confirmar contraseña</label>
-                            <div class="input-group input-group-merge">
-                                <span class="input-group-text"><i class="bx bx-check-shield"></i></span>
-                                <input asp-for="Input.ConfirmPassword" class="form-control"
-                                       placeholder="••••••••" autocomplete="new-password" />
-                            </div>
-                            <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
-                        </div>
-
-                        <!-- BOTON -->
-                        <div class="mb-3">
-                            <button id="registerSubmit" type="submit" class="btn btn-success w-100">
-                                <i class="bx bx-user-plus me-1"></i> Crear Cuenta
-                            </button>
-                        </div>
-
-                        <!-- LOGIN -->
-                        <p class="text-center">
-                            ¿Ya tienes cuenta?
-                            <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">
-                                Iniciar sesión
-                            </a>
-                        </p>
-
-                    </form>
-
-                    <!-- 🔥 DIVIDER -->
-                    <div class="divider my-4">
-                        <div class="divider-text">o regístrate con</div>
-                    </div>
-
-                    <!-- 🔥 LOGIN EXTERNO -->
-                    @{
-                        if ((Model.ExternalLogins?.Count ?? 0) > 0)
-                        {
-                            <form id="external-account"
-                                  asp-page="./ExternalLogin"
-                                  asp-route-returnUrl="@Model.ReturnUrl"
-                                  method="post">
-
-                                <div class="d-flex flex-wrap gap-2 justify-content-center">
-
-                                    @foreach (var provider in Model.ExternalLogins!)
-                                    {
-                                        <button type="submit"
-                                                class="btn btn-outline-success"
-                                                name="provider"
-                                                value="@provider.Name">
-
-                                            <i class="bx bx-user-circle me-1"></i>
-                                            @provider.DisplayName
-                                        </button>
-                                    }
-
-                                </div>
-                            </form>
-                        }
-                        else
-                        {
-                            <div class="text-center text-muted small">
-                                No hay servicios externos disponibles
-                            </div>
-                        }
-                    }
-
-                </div>
+            <!-- IDENTIFICACION -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Identificacion" class="form-control" />
+                <label>Identificación</label>
             </div>
 
-        </div>
-    </div>
+            <!-- NOMBRE -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.NombreCompleto" class="form-control" />
+                <label>Nombre completo</label>
+            </div>
 
+            <!-- GENERO -->
+            <div class="form-floating mb-3">
+                <select asp-for="Input.Genero" class="form-control">
+                    <option value="">Seleccione género</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="No especifica">No especifica</option>
+                </select>
+                <label>Género</label>
+            </div>
+
+            <!-- EMAIL -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Email" class="form-control" autocomplete="username" />
+                <label>Correo electrónico</label>
+                <span asp-validation-for="Input.Email" class="text-danger"></span>
+            </div>
+
+            <!-- TIPO TARJETA -->
+            <div class="form-floating mb-3">
+                <select asp-for="Input.TipoTarjeta" class="form-control">
+                    <option value="">Seleccione tipo de tarjeta</option>
+                    <option value="VISA">VISA</option>
+                    <option value="MASTERCARD">MASTERCARD</option>
+                    <option value="AMERICAN EXPRESS">AMERICAN EXPRESS</option>
+                </select>
+                <label>Tipo de tarjeta</label>
+            </div>
+
+            <!-- NUMERO TARJETA -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.NumeroTarjeta" class="form-control" placeholder="0000-0000-0000-0000" />
+                <label>Número de tarjeta</label>
+            </div>
+
+            <!-- PASSWORD -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
+                <label>Contraseña</label>
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            </div>
+
+            <!-- CONFIRM PASSWORD -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.ConfirmPassword" class="form-control" />
+                <label>Confirmar contraseña</label>
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <!-- BOTON -->
+            <button id="registerSubmit" type="submit" class="w-100 btn btn-primary">
+                Registrarse
+            </button>
+
+        </form>
+    </div>
 </div>
 
 @section Scripts {

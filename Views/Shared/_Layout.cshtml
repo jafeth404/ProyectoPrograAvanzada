@@ -171,6 +171,21 @@
                         </li>
                     }
 
+                    <!-- CUENTA (siempre visible cuando está autenticado) -->
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <li class="menu-header small text-uppercase mt-2">
+                            <span class="menu-header-text">Cuenta</span>
+                        </li>
+
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "WebAuthn" ? "active" : "")">
+                            <a asp-controller="WebAuthn" asp-action="Manage" class="menu-link">
+                                <i class="menu-icon bx bx-fingerprint"></i>
+                                <div>Mis Passkeys</div>
+                            </a>
+                        </li>
+                    }
+
                 </ul>
             </aside>
 

@@ -1,75 +1,235 @@
-﻿@model proyectoprogra.Models.Entities.Pedido
+@model proyectoprogra.Models.Entities.Pedido
 
 @{
     ViewData["Title"] = "Crear Factura";
 }
 
-<h2>Crear Factura</h2>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<div asp-validation-summary="All" class="text-danger"></div>
+    <h4 class="fw-bold py-3 mb-4">
+        <i class="bx bx-receipt me-2 text-primary"></i> Crear Factura
+    </h4>
 
-<form asp-action="Create" method="get" class="mb-4">
-    <div class="mb-3">
-        <label class="form-label">Pedido</label>
-        <select name="pedidoId" class="form-control" asp-items="ViewBag.Pedidos"></select>
+    <div asp-validation-summary="All" class="alert alert-danger d-none" id="validationSummary"></div>
+
+    <!-- Step 1: select order -->
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Seleccionar Pedido</h5></div>
+        <div class="card-body">
+            <form asp-action="Create" method="get" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label">Pedido</label>
+                    <select name="pedidoId" class="form-select" asp-items="ViewBag.Pedidos"></select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bx bx-search me-1"></i> Cargar
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-    <button type="submit" class="btn btn-primary">Cargar Pedido</button>
-</form>
 
-@if (Model != null)
-{
-    var subtotal = Model.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
-    var iva = subtotal * 0.13m;
+    @if (Model != null)
+    {
+        var subtotal = Model.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+        var iva      = subtotal * 0.13m;
 
-    <div class="card p-4 mb-4">
-        <h4>Pedido #@Model.PedidoId</h4>
+        <!-- Hacienda: Taxpayer lookup -->
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center gap-2">
+                <h5 class="mb-0">Datos del Cliente (Hacienda)</h5>
+                <span class="badge bg-label-primary ms-1">API Hacienda</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Cédula / RUC</label>
+                        <div class="input-group">
+                            <input type="text" id="cedulaInput" class="form-control"
+                                   placeholder="Ej: 101234567" maxlength="12" />
+                            <button class="btn btn-outline-primary" type="button" id="btnBuscarCliente">
+                                <i class="bx bx-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" id="nombreCliente" class="form-control" readonly
+                               placeholder="Se completará automáticamente" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Estado Tributario</label>
+                        <input type="text" id="estadoCliente" class="form-control" readonly />
+                    </div>
+                </div>
+                <div id="clienteAlert" class="alert mt-2 d-none"></div>
+            </div>
+        </div>
 
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio</th>
-                    <th>Total Línea</th>
-                </tr>
-            </thead>
-            <tbody>
-            @foreach (var d in Model.PedidoDetalles)
-            {
-                <tr>
-                    <td>@d.Producto?.Nombre</td>
-                    <td>@d.Cantidad</td>
-                    <td>₡@d.PrecioUnitario</td>
-                    <td>₡@(d.Cantidad * d.PrecioUnitario)</td>
-                </tr>
+        <!-- Hacienda: Exchange rate -->
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center gap-2">
+                <h5 class="mb-0">Tipo de Cambio (BCCR)</h5>
+                <span class="badge bg-label-info ms-1">API Hacienda</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <button class="btn btn-outline-info btn-sm" type="button" id="btnTipoCambio">
+                            <i class="bx bx-refresh me-1"></i> Consultar
+                        </button>
+                    </div>
+                    <div class="col-auto">
+                        <span id="tipoCambioResult" class="text-muted">—</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order items -->
+        <div class="card mb-4">
+            <div class="card-header"><h5 class="mb-0">Pedido #@Model.PedidoId</h5></div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cantidad</th>
+                            <th>Precio</th>
+                            <th>Total Línea</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var d in Model.PedidoDetalles)
+                        {
+                            <tr>
+                                <td>@d.Producto?.Nombre</td>
+                                <td>@d.Cantidad</td>
+                                <td>₡@d.PrecioUnitario</td>
+                                <td>₡@(d.Cantidad * d.PrecioUnitario)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <p class="mb-1"><strong>Subtotal:</strong> ₡@subtotal</p>
+                <p class="mb-0"><strong>IVA (13%):</strong> ₡@iva</p>
+            </div>
+        </div>
+
+        <!-- Generate form -->
+        <div class="card">
+            <div class="card-header"><h5 class="mb-0">Cargos adicionales</h5></div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="pedidoId" value="@Model.PedidoId" />
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Propina</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₡</span>
+                                <input type="number" step="0.01" min="0" name="propina"
+                                       class="form-control" value="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Costo Empaque</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₡</span>
+                                <input type="number" step="0.01" min="0" name="costoEmpaque"
+                                       class="form-control" value="0" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Costo Delivery</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₡</span>
+                                <input type="number" step="0.01" min="0" name="costoDelivery"
+                                       class="form-control" value="0" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bx bx-check me-1"></i> Generar Factura
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">Volver</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    }
+
+</div>
+
+@section Scripts {
+<script>
+    // ── Taxpayer lookup ──────────────────────────────────────────────
+    document.getElementById('btnBuscarCliente').addEventListener('click', async () => {
+        const cedula = document.getElementById('cedulaInput').value.trim();
+        const alertEl = document.getElementById('clienteAlert');
+        alertEl.className = 'alert mt-2 d-none';
+
+        if (!cedula) {
+            alertEl.textContent = 'Ingrese una cédula.';
+            alertEl.className = 'alert alert-warning mt-2';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/hacienda/contribuyente?id=${encodeURIComponent(cedula)}`);
+            const data = await res.json();
+
+            if (!res.ok) {
+                alertEl.textContent = data.error ?? 'No encontrado.';
+                alertEl.className = 'alert alert-danger mt-2';
+                document.getElementById('nombreCliente').value = '';
+                document.getElementById('estadoCliente').value = '';
+                return;
             }
-            </tbody>
-        </table>
 
-        <p><strong>Subtotal:</strong> ₡@subtotal</p>
-        <p><strong>IVA:</strong> ₡@iva</p>
-    </div>
+            document.getElementById('nombreCliente').value = data.nombre ?? '';
+            document.getElementById('estadoCliente').value =
+                data.estado === '1' ? 'Activo' : (data.estado ?? '—');
 
-    <form asp-action="Create" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="pedidoId" value="@Model.PedidoId" />
+            if (data.moroso || data.omiso) {
+                alertEl.textContent = '⚠ Contribuyente con situación irregular (moroso/omiso).';
+                alertEl.className = 'alert alert-warning mt-2';
+            }
+        } catch {
+            alertEl.textContent = 'Error de conexión con la API de Hacienda.';
+            alertEl.className = 'alert alert-danger mt-2';
+        }
+    });
 
-        <div class="mb-3">
-            <label class="form-label">Propina</label>
-            <input type="number" step="0.01" name="propina" class="form-control" value="0" />
-        </div>
+    // Allow Enter key in cedula field
+    document.getElementById('cedulaInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('btnBuscarCliente').click();
+        }
+    });
 
-        <div class="mb-3">
-            <label class="form-label">Costo Empaque</label>
-            <input type="number" step="0.01" name="costoEmpaque" class="form-control" value="0" />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Costo Delivery</label>
-            <input type="number" step="0.01" name="costoDelivery" class="form-control" value="0" />
-        </div>
-
-        <button type="submit" class="btn btn-success">Generar Factura</button>
-        <a asp-action="Index" class="btn btn-secondary">Volver</a>
-    </form>
+    // ── Exchange rate ────────────────────────────────────────────────
+    document.getElementById('btnTipoCambio').addEventListener('click', async () => {
+        const el = document.getElementById('tipoCambioResult');
+        el.textContent = 'Consultando...';
+        try {
+            const res  = await fetch('/api/hacienda/tipocambio');
+            const data = await res.json();
+            if (res.ok) {
+                el.textContent =
+                    `Compra: ₡${data.compra.toFixed(2)}  /  Venta: ₡${data.venta.toFixed(2)}` +
+                    `  (${data.fecha})`;
+            } else {
+                el.textContent = data.error ?? 'Error';
+            }
+        } catch {
+            el.textContent = 'Error de conexión.';
+        }
+    });
+</script>
 }

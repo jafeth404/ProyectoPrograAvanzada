@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using proyectoprogra.Models.Entities;
 using proyectoprogra.Models;
+using Fido2NetLib.Objects;
 namespace proyectoprogra.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
@@ -20,6 +21,8 @@ namespace proyectoprogra.Data
         public DbSet<FacturaDetalle> FacturaDetalles { get; set; }
 
         public DbSet<UsuarioExtra> UsuariosExtra { get; set; }
+
+        public DbSet<FidoStoredCredential> FidoCredentials { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -68,6 +71,10 @@ namespace proyectoprogra.Data
             modelBuilder.Entity<FacturaDetalle>()
                 .Property(f => f.TotalLinea)
                 .HasColumnType("decimal(10,2)");
+
+            modelBuilder.Entity<FidoStoredCredential>()
+                .HasIndex(f => f.CredentialIdBase64)
+                .IsUnique();
         }
     }
 }

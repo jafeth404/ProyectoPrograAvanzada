@@ -1,26 +1,31 @@
-﻿@page
+@page
 @model LoginModel
 
 @{
-    ViewData["Title"] = "Log in";
+    ViewData["Title"] = "Iniciar sesión";
 }
 
 <h1>@ViewData["Title"]</h1>
+
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-5">
         <section>
             <form id="account" method="post">
-                <h2>Use a local account to log in.</h2>
+                <h2>Usar cuenta local</h2>
                 <hr />
                 <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
                 <div class="form-floating mb-3">
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                    <input asp-for="Input.Email" class="form-control"
+                           autocomplete="username webauthn" aria-required="true"
+                           placeholder="name@example.com" />
                     <label asp-for="Input.Email" class="form-label">Email</label>
                     <span asp-validation-for="Input.Email" class="text-danger"></span>
                 </div>
                 <div class="form-floating mb-3">
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label asp-for="Input.Password" class="form-label">Password</label>
+                    <input asp-for="Input.Password" class="form-control"
+                           autocomplete="current-password" aria-required="true"
+                           placeholder="password" />
+                    <label asp-for="Input.Password" class="form-label">Contraseña</label>
                     <span asp-validation-for="Input.Password" class="text-danger"></span>
                 </div>
                 <div class="checkbox mb-3">
@@ -29,47 +34,52 @@
                         @Html.DisplayNameFor(m => m.Input.RememberMe)
                     </label>
                 </div>
-                <div>
-                    <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                <div class="d-grid mb-2">
+                    <button id="login-submit" type="submit" class="btn btn-lg btn-primary">
+                        Iniciar sesión
+                    </button>
                 </div>
+
+                <!-- Passkey login -->
+                <div class="d-grid mb-3">
+                    <button id="btnPasskey" type="button" class="btn btn-lg btn-outline-secondary">
+                        <i class="bx bx-fingerprint me-1"></i> Iniciar con Passkey
+                    </button>
+                </div>
+
+                <div id="passkeyAlert" class="alert d-none mb-2"></div>
+
                 <div>
-                    <p>
-                        <a id="forgot-password" asp-page="./ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
+                    <p><a id="forgot-password" asp-page="./ForgotPassword">¿Olvidaste tu contraseña?</a></p>
+                    <p><a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Crear cuenta</a></p>
+                    <p><a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Reenviar confirmación</a></p>
                 </div>
             </form>
         </section>
     </div>
-    <div class="col-md-6 col-md-offset-2">
+
+    <div class="col-md-6 offset-md-1">
         <section>
-            <h3>Use another service to log in.</h3>
+            <h3>Usar otro servicio</h3>
             <hr />
             @{
                 if ((Model.ExternalLogins?.Count ?? 0) == 0)
                 {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
+                    <p>No hay servicios externos configurados.</p>
                 }
                 else
                 {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
+                    <form id="external-account" asp-page="./ExternalLogin"
+                          asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
                         <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
+                            @foreach (var provider in Model.ExternalLogins!)
+                            {
+                                <button type="submit" class="btn btn-primary me-2"
+                                        name="provider" value="@provider.Name"
+                                        title="Log in using your @provider.DisplayName account">
+                                    @provider.DisplayName
+                                </button>
+                            }
                         </div>
                     </form>
                 }
@@ -80,4 +90,89 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Base64url helpers
+        function b64urlDecode(b64) {
+            const padded = b64.replace(/-/g, '+').replace(/_/g, '/');
+            return Uint8Array.from(atob(padded), c => c.charCodeAt(0)).buffer;
+        }
+        function b64urlEncode(buf) {
+            return btoa(String.fromCharCode(...new Uint8Array(buf)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+        }
+
+        function showPasskeyAlert(msg, ok) {
+            const el = document.getElementById('passkeyAlert');
+            el.textContent = msg;
+            el.className   = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
+        }
+
+        document.getElementById('btnPasskey').addEventListener('click', async () => {
+            const btn = document.getElementById('btnPasskey');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verificando...';
+
+            try {
+                // Step 1 – get challenge from server
+                const optRes = await fetch('/WebAuthn/AssertionOptions', { method: 'POST' });
+                if (!optRes.ok) { showPasskeyAlert('Error al iniciar passkey.', false); return; }
+
+                const options = await optRes.json();
+
+                // Decode binary fields
+                options.challenge = b64urlDecode(options.challenge);
+                if (options.allowCredentials?.length) {
+                    options.allowCredentials = options.allowCredentials.map(c => ({
+                        ...c, id: b64urlDecode(c.id)
+                    }));
+                }
+
+                // Step 2 – browser prompts biometric/PIN
+                const cred = await navigator.credentials.get({
+                    publicKey: options,
+                    mediation: 'optional'
+                });
+
+                // Step 3 – encode and send to server
+                const payload = {
+                    id:    cred.id,
+                    rawId: b64urlEncode(cred.rawId),
+                    type:  cred.type,
+                    response: {
+                        authenticatorData: b64urlEncode(cred.response.authenticatorData),
+                        clientDataJSON:    b64urlEncode(cred.response.clientDataJSON),
+                        signature:         b64urlEncode(cred.response.signature),
+                        userHandle:        cred.response.userHandle
+                                               ? b64urlEncode(cred.response.userHandle)
+                                               : null
+                    }
+                };
+
+                const assertRes = await fetch('/WebAuthn/MakeAssertion', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify(payload)
+                });
+
+                const result = await assertRes.json();
+
+                if (assertRes.ok && result.status === 'ok') {
+                    showPasskeyAlert('¡Autenticado!', true);
+                    window.location.href = result.redirectUrl ?? '/';
+                } else {
+                    showPasskeyAlert('Error: ' + (result.error ?? 'Desconocido'), false);
+                }
+            } catch (e) {
+                if (e.name === 'NotAllowedError') {
+                    showPasskeyAlert('Operación cancelada.', false);
+                } else {
+                    showPasskeyAlert('Error: ' + e.message, false);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bx bx-fingerprint me-1"></i> Iniciar con Passkey';
+            }
+        });
+    </script>
 }

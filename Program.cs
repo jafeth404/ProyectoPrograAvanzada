@@ -7,7 +7,7 @@ using proyectoprogra.Data;
 using proyectoprogra.Models;
 using DinkToPdf;
 using DinkToPdf.Contracts;
-
+using Fido2NetLib;
 using proyectoprogra.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,6 +46,36 @@ builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 
+// 🔥 SESSION (required by Fido2 challenge storage)
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout        = TimeSpan.FromMinutes(10);
+    options.Cookie.HttpOnly    = true;
+    options.Cookie.IsEssential = true;
+});
+
+// 🔥 HACIENDA API
+builder.Services.AddHttpClient<HaciendaApiService>(client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["HaciendaApi:BaseUrl"] ?? "https://api.hacienda.go.cr");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
+// 🔥 FIDO2 / PASSKEYS
+builder.Services.AddFido2(options =>
+{
+    options.ServerDomain           = builder.Configuration["Fido2:ServerDomain"]!;
+    options.ServerName             = builder.Configuration["Fido2:ServerName"]!;
+    options.Origins                = builder.Configuration
+                                        .GetSection("Fido2:Origins")
+                                        .Get<HashSet<string>>()!;
+    options.TimestampDriftTolerance = builder.Configuration
+                                        .GetValue<int>("Fido2:TimestampDriftTolerance");
+});
+
 var app = builder.Build();
 
 // 🔥 PIPELINE
@@ -61,10 +91,11 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseSession();          // 👈 must be before UseRouting (Fido2 challenge storage)
 
 app.UseRouting();
 
-app.UseAuthentication();   // 👈 SIEMPRE primero
+app.UseAuthentication();
 app.UseAuthorization();
 
 // 🔥 ROUTES

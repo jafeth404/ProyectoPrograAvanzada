@@ -10,7 +10,10 @@
         <i class="bx bx-receipt me-2 text-primary"></i> Crear Factura
     </h4>
 
-    <div asp-validation-summary="All" class="alert alert-danger d-none" id="validationSummary"></div>
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+    }
 
     <!-- Step 1: select order -->
     <div class="card mb-4">
@@ -61,6 +64,11 @@
                     <div class="col-md-3">
                         <label class="form-label">Estado Tributario</label>
                         <input type="text" id="estadoCliente" class="form-control" readonly />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Correo del Cliente</label>
+                        <input type="email" id="emailCliente" name="emailCliente"
+                               class="form-control" placeholder="correo@ejemplo.com" />
                     </div>
                 </div>
                 <div id="clienteAlert" class="alert mt-2 d-none"></div>
@@ -124,6 +132,7 @@
                 <form asp-action="Create" method="post">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="pedidoId" value="@Model.PedidoId" />
+                    <input type="hidden" name="emailCliente" id="emailClienteHidden" />
 
                     <div class="row g-3">
                         <div class="col-md-4">
@@ -192,8 +201,7 @@
             }
 
             document.getElementById('nombreCliente').value = data.nombre ?? '';
-            document.getElementById('estadoCliente').value =
-                data.estado === '1' ? 'Activo' : (data.estado ?? '—');
+            document.getElementById('estadoCliente').value = data.estado ?? '—';
 
             if (data.moroso || data.omiso) {
                 alertEl.textContent = '⚠ Contribuyente con situación irregular (moroso/omiso).';
@@ -211,6 +219,11 @@
             e.preventDefault();
             document.getElementById('btnBuscarCliente').click();
         }
+    });
+
+    // ── Sync email field into hidden POST input ──────────────────────
+    document.getElementById('emailCliente').addEventListener('input', e => {
+        document.getElementById('emailClienteHidden').value = e.target.value;
     });
 
     // ── Exchange rate ────────────────────────────────────────────────

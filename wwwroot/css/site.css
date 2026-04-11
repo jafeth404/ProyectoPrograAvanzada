@@ -20,3 +20,137 @@ html {
 body {
   margin-bottom: 60px;
 }
+
+/* =============================================
+   LIGHT MODE — base styles (replacing inline)
+   ============================================= */
+
+body,
+.layout-page,
+.content-wrapper {
+    background-color: #f5f5f9;
+}
+
+.menu-item.active .menu-link {
+    color: #fff !important;
+    font-weight: 600;
+}
+
+.menu-item.active .menu-icon {
+    color: #fff !important;
+}
+
+.menu-item .menu-link:hover {
+    color: #696cff !important;
+}
+
+/* =============================================
+   DARK MODE
+   ============================================= */
+
+/* Page backgrounds */
+[data-bs-theme="dark"] body,
+[data-bs-theme="dark"] .layout-page,
+[data-bs-theme="dark"] .content-wrapper {
+    background-color: #25293c !important;
+}
+
+/* Sidebar */
+[data-bs-theme="dark"] .layout-menu,
+[data-bs-theme="dark"] .bg-menu-theme {
+    background-color: #2b2c40 !important;
+}
+
+[data-bs-theme="dark"] .menu-inner .menu-item .menu-link,
+[data-bs-theme="dark"] .menu-inner .menu-item .menu-link .menu-icon,
+[data-bs-theme="dark"] .app-brand-text,
+[data-bs-theme="dark"] .menu-header-text {
+    color: #cfd3ec !important;
+}
+
+[data-bs-theme="dark"] .menu-inner .menu-item.active > .menu-link,
+[data-bs-theme="dark"] .menu-inner .menu-item .menu-link:hover {
+    background-color: rgba(105, 108, 255, 0.16) !important;
+    color: #696cff !important;
+}
+
+[data-bs-theme="dark"] .menu-inner .menu-item.active > .menu-link .menu-icon,
+[data-bs-theme="dark"] .menu-inner .menu-item .menu-link:hover .menu-icon {
+    color: #696cff !important;
+}
+
+/* Navbar */
+[data-bs-theme="dark"] .layout-navbar,
+[data-bs-theme="dark"] .bg-navbar-theme {
+    background-color: #2b2c40 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Footer */
+[data-bs-theme="dark"] .content-footer,
+[data-bs-theme="dark"] .bg-footer-theme {
+    background-color: #2b2c40 !important;
+    color: #cfd3ec;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Cards */
+[data-bs-theme="dark"] .card {
+    background-color: #2b2c40 !important;
+    color: #cfd3ec !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-bs-theme="dark"] .card-header,
+[data-bs-theme="dark"] .card-footer {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(255, 255, 255, 0.08) !important;
+    color: #cfd3ec !important;
+}
+
+/* Tables */
+[data-bs-theme="dark"] .table {
+    --bs-table-bg: #2b2c40;
+    --bs-table-striped-bg: #313449;
+    --bs-table-hover-bg: #363750;
+    color: #cfd3ec;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-bs-theme="dark"] .table th {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Dark mode toggle button */
+[data-bs-theme="dark"] #darkModeToggle {
+    color: #cfd3ec;
+}
+
+[data-bs-theme="dark"] #darkModeToggle:hover {
+    background-color: rgba(105, 108, 255, 0.16);
+    color: #696cff;
+}
+
+/* ApexCharts */
+[data-bs-theme="dark"] .apexcharts-canvas {
+    background: transparent !important;
+}
+
+[data-bs-theme="dark"] .apexcharts-canvas svg {
+    background: transparent !important;
+}
+
+[data-bs-theme="dark"] .apexcharts-tooltip {
+    background: #2b2c40 !important;
+    color: #cfd3ec !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-bs-theme="dark"] .apexcharts-gridline {
+    stroke: rgba(255, 255, 255, 0.08);
+}
+
+[data-bs-theme="dark"] .apexcharts-xaxis-label,
+[data-bs-theme="dark"] .apexcharts-yaxis-label {
+    fill: #cfd3ec;
+}

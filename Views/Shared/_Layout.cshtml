@@ -3,7 +3,7 @@
 @inject UserManager<ApplicationUser> UserManager
 
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" id="htmlRoot">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,26 +16,18 @@
     <link href="/sneat/assets/vendor/fonts/boxicons.css" rel="stylesheet" />
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
 
-    <style>
-            body, .layout-page, .content-wrapper {
-                background-color: #f5f5f9 !important;
-            }
-
-            .menu-item.active .menu-link {
-                color: #fff !important;
-                font-weight: 600;
-            }
-
-            .menu-item.active .menu-icon {
-                color: #fff !important;
-            }
-
-            .menu-item .menu-link:hover {
-                color: #696cff !important;
-            }
-    </style>
+    <link rel="stylesheet" href="/css/site.css" />
 
     <script src="/sneat/assets/vendor/js/helpers.js"></script>
+
+    <!-- Apply saved theme before render to prevent flash -->
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.getElementById('htmlRoot').setAttribute('data-bs-theme', 'dark');
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -195,6 +187,10 @@
                         </h5>
 
                         <div class="ms-auto d-flex align-items-center gap-3">
+                            <!-- Dark mode toggle -->
+                            <button id="darkModeToggle" class="btn btn-sm btn-icon rounded-pill" title="Alternar modo oscuro">
+                                <i id="darkModeIcon" class="bx bx-moon fs-5"></i>
+                            </button>
                             <i class="bx bx-bell fs-4"></i>
                             <partial name="_LoginPartial" />
                         </div>
@@ -227,6 +223,7 @@
     <script src="/sneat/assets/vendor/js/menu.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="/js/site.js"></script>
 
 </body>
 </html>

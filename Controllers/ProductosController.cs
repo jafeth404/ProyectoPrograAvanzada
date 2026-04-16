@@ -157,12 +157,20 @@ namespace proyectoprogra.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var producto = await _context.Productos.FindAsync(id);
-            if (producto != null)
+            if (producto == null) return RedirectToAction(nameof(Index));
+
+            // Validación: el producto está vinculado a facturas
+            bool enFacturas = await _context.FacturaDetalles.AnyAsync(fd => fd.ProductoId == id);
+            if (enFacturas)
             {
-                _context.Productos.Remove(producto);
+                TempData["Error"] = "Este producto no puede eliminarse porque está vinculado a facturas existentes. El historial de facturación debe conservarse.";
+                return RedirectToAction(nameof(Delete), new { id });
             }
 
+            // Soft-delete: desactivar en lugar de eliminar
+            producto.Activo = false;
             await _context.SaveChangesAsync();
+            TempData["Exito"] = $"El producto \"{producto.Nombre}\" fue desactivado correctamente.";
             return RedirectToAction(nameof(Index));
         }
 

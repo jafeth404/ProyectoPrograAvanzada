@@ -3,20 +3,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
 using proyectoprogra.Data;
 using proyectoprogra.Models;
-using DinkToPdf;
-using DinkToPdf.Contracts;
 using Fido2NetLib;
 using proyectoprogra.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-var context = new CustomAssemblyLoadContext();
-var path = Path.Combine(AppContext.BaseDirectory, "libwkhtmltox.dll");
-
-context.LoadUnmanagedLibrary(path);
-
-builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 
 // 🔥 DB
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -33,7 +29,64 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options =>
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// 🔥 AUTORIZACIÓN GLOBAL
+// 🔥 JWT AUTHENTICATION
+var jwtSecret = builder.Configuration["Jwt:Secret"]!;
+var jwtIssuer  = builder.Configuration["Jwt:Issuer"]!;
+var jwtAudience = builder.Configuration["Jwt:Audience"]!;
+
+builder.Services.AddAuthentication()
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+        };
+    });
+
+// 🔥 SWAGGER WITH JWT BEARER
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title   = "Restaurante Digital API",
+        Version = "v1",
+        Description = "REST API para el sistema de restaurante digital"
+    });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name         = "Authorization",
+        Type         = SecuritySchemeType.ApiKey,
+        Scheme       = "Bearer",
+        BearerFormat = "JWT",
+        In           = ParameterLocation.Header,
+        Description  = "Ingrese: Bearer {token}"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id   = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+// 🔥 AUTORIZACIÓN GLOBAL (solo MVC, las API usan [Authorize(AuthenticationSchemes=...)])
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new AuthorizeFilter());
@@ -44,7 +97,11 @@ builder.Services.AddRazorPages();
 // 🔥 EMAIL (para forgot password)
 builder.Services.AddTransient<IEmailSender, EmailSender>();
 
-builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
+// 🔥 PDF (cross-platform via QuestPDF)
+builder.Services.AddSingleton<FacturaPdfService>();
+
+// 🔥 IN-MEMORY CACHE (used by API list endpoints)
+builder.Services.AddMemoryCache();
 
 // 🔥 SESSION (required by Fido2 challenge storage)
 builder.Services.AddDistributedMemoryCache();
@@ -88,6 +145,14 @@ else
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+// 🔥 SWAGGER (available in all environments for demo/grading purposes)
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Restaurante Digital API v1");
+    c.RoutePrefix = "swagger";
+});
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

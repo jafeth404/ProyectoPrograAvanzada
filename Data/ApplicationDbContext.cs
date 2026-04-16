@@ -64,6 +64,10 @@ namespace proyectoprogra.Data
                 .Property(f => f.CostoDelivery)
                 .HasColumnType("decimal(10,2)");
 
+            modelBuilder.Entity<Factura>()
+                .Property(f => f.CreditoAplicado)
+                .HasColumnType("decimal(10,2)");
+
             modelBuilder.Entity<FacturaDetalle>()
                 .Property(f => f.PrecioUnitario)
                 .HasColumnType("decimal(10,2)");

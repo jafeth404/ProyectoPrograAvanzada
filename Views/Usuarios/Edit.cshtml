@@ -1,25 +1,211 @@
-﻿@model proyectoprogra.Models.ApplicationUser
+@model proyectoprogra.Models.ViewModels.EditarUsuarioVM
 
-<h2>Editar Rol</h2>
+@{
+    ViewData["Title"] = "Editar Usuario";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
 
-<form method="post">
+<div class="container-xxl flex-grow-1 container-p-y">
 
-    <input type="hidden" name="id" value="@Model.Id" />
-
-    <div class="mb-3">
-        <label>Email</label>
-        <input value="@Model.Email" class="form-control" disabled />
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-edit me-2 text-primary"></i>
+            Editar Usuario
+        </h4>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bx bx-arrow-back me-1"></i> Volver
+        </a>
     </div>
 
-    <div class="mb-3">
-        <label>Rol</label>
-        <select name="rol" class="form-control">
-            @foreach (var r in ViewBag.Roles)
-            {
-                <option value="@r">@r</option>
+    <div class="card">
+        <div class="card-body pt-4">
+
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="Id" />
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-4" role="alert"></div>
+
+                <!-- Información básica -->
+                <h6 class="fw-semibold text-uppercase text-muted small mb-3">Información básica</h6>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="Email" class="form-label fw-medium">Email</label>
+                        <input asp-for="Email" type="email" class="form-control" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-medium">Identificación</label>
+                        <input class="form-control" value="— no editable —" disabled />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="NombreCompleto" class="form-label fw-medium">Nombre completo</label>
+                        <input asp-for="NombreCompleto" class="form-control" />
+                        <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Genero" class="form-label fw-medium">Género</label>
+                        <select asp-for="Genero" class="form-select">
+                            <option value="No especifica">No especifica</option>
+                            <option value="Masculino">Masculino</option>
+                            <option value="Femenino">Femenino</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                        <span asp-validation-for="Genero" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <!-- Rol -->
+                <h6 class="fw-semibold text-uppercase text-muted small mb-3">Rol</h6>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="Rol" class="form-label fw-medium">Rol</label>
+                        <select asp-for="Rol" class="form-select">
+                            @foreach (var r in ViewBag.Roles)
+                            {
+                                if (Model.Rol == r)
+                                {
+                                    <option value="@r" selected>@r</option>
+                                }
+                                else
+                                {
+                                    <option value="@r">@r</option>
+                                }
+                            }
+                        </select>
+                        <span asp-validation-for="Rol" class="text-danger small"></span>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <!-- Datos de tarjeta -->
+                <h6 class="fw-semibold text-uppercase text-muted small mb-3">
+                    Datos de tarjeta <span class="text-muted fw-normal">(dejar en blanco para no modificar)</span>
+                </h6>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="TipoTarjeta" class="form-label fw-medium">Tipo de tarjeta</label>
+                        <select asp-for="TipoTarjeta" class="form-select">
+                            <option value="N/A">N/A</option>
+                            <option value="Visa">Visa</option>
+                            <option value="MasterCard">MasterCard</option>
+                            <option value="American Express">American Express</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="NumeroTarjeta" class="form-label fw-medium">Número de tarjeta</label>
+                        <input asp-for="NumeroTarjeta" class="form-control" placeholder="XXXX-XXXX-XXXX-XXXX" />
+                        <div class="form-text">Solo se actualizarán los últimos 4 dígitos si ingresa un número.</div>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <!-- Contraseña -->
+                <h6 class="fw-semibold text-uppercase text-muted small mb-3">Contraseña</h6>
+
+                <div class="mb-4">
+                    <button type="button" id="btnResetPassword" class="btn btn-outline-warning"
+                            data-usuario-id="@Model.Id">
+                        <i class="bx bx-refresh me-1"></i> Generar nueva contraseña
+                    </button>
+                    <div class="form-text mt-1">Se generará una contraseña aleatoria segura. Se mostrará en pantalla para que pueda comunicarla al usuario.</div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bx bx-save me-1"></i> Guardar cambios
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal: nueva contraseña generada -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bx bx-key me-2 text-warning"></i>Nueva contraseña generada
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">La nueva contraseña para <strong id="resetEmail"></strong> es:</p>
+                <div class="input-group mt-2">
+                    <input type="text" id="resetPasswordValue" class="form-control fw-bold font-monospace" readonly />
+                    <button class="btn btn-outline-secondary" type="button" id="btnCopyPassword" title="Copiar">
+                        <i class="bx bx-copy"></i>
+                    </button>
+                </div>
+                <p class="text-muted small mt-3 mb-0">
+                    <i class="bx bx-error-circle me-1"></i>
+                    Anote esta contraseña ahora — no se podrá recuperar después.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+    document.getElementById('btnResetPassword').addEventListener('click', function () {
+        var userId = this.dataset.usuarioId;
+        var btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generando…';
+
+        fetch('/Usuarios/ResetPassword', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'RequestVerificationToken': token
+            },
+            body: 'id=' + encodeURIComponent(userId)
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-refresh me-1"></i> Generar nueva contraseña';
+
+            if (data.success) {
+                document.getElementById('resetEmail').textContent = data.email;
+                document.getElementById('resetPasswordValue').value = data.password;
+                new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+            } else {
+                alert(data.message ?? 'Error al resetear contraseña.');
             }
-        </select>
-    </div>
+        })
+        .catch(function () {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-refresh me-1"></i> Generar nueva contraseña';
+            alert('Error de conexión.');
+        });
+    });
 
-    <button class="btn btn-success">Guardar</button>
-</form>
+    document.getElementById('btnCopyPassword').addEventListener('click', function () {
+        var input = document.getElementById('resetPasswordValue');
+        navigator.clipboard.writeText(input.value).then(function () {
+            var btn = document.getElementById('btnCopyPassword');
+            btn.innerHTML = '<i class="bx bx-check"></i>';
+            setTimeout(function () { btn.innerHTML = '<i class="bx bx-copy"></i>'; }, 1500);
+        });
+    });
+</script>
+}

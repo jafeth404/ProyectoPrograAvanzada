@@ -288,6 +288,9 @@ namespace proyectoprogra.Migrations
                     b.Property<decimal?>("CostoEmpaque")
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<decimal>("CreditoAplicado")
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
 
@@ -303,6 +306,9 @@ namespace proyectoprogra.Migrations
 
                     b.Property<decimal?>("Propina")
                         .HasColumnType("decimal(10,2)");
+
+                    b.Property<bool>("Reversada")
+                        .HasColumnType("bit");
 
                     b.Property<decimal>("Subtotal")
                         .HasColumnType("decimal(10,2)");

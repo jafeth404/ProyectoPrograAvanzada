@@ -9,6 +9,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - RestauranteApp</title>
 
+    <!-- Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap" rel="stylesheet">
+
     <!-- SNEAT CSS -->
     <link href="/sneat/assets/vendor/css/core.css" rel="stylesheet" />
     <link href="/sneat/assets/vendor/css/theme-default.css" rel="stylesheet" />
@@ -119,10 +124,17 @@
                             </a>
                         </li>
 
-                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Pedidos" ? "active" : "")">
-                            <a asp-controller="Pedidos" asp-action="Index" class="menu-link">
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Salonero" ? "active" : "")">
+                            <a asp-controller="Salonero" asp-action="Index" class="menu-link">
                                 <i class="menu-icon bx bx-cart-alt"></i>
-                                <div>Pedidos</div>
+                                <div>Pedidos en Mesa</div>
+                            </a>
+                        </li>
+
+                        <li class="menu-item">
+                            <a asp-controller="Salonero" asp-action="NuevoPedido" class="menu-link">
+                                <i class="menu-icon bx bx-cart-add"></i>
+                                <div>Nuevo Pedido</div>
                             </a>
                         </li>
                     }
@@ -130,8 +142,8 @@
                     <!-- COCINA -->
                     @if (User.IsInRole("Cocina"))
                     {
-                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Pedidos" ? "active" : "")">
-                            <a asp-controller="Pedidos" asp-action="Index" class="menu-link">
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Cocina" ? "active" : "")">
+                            <a asp-controller="Cocina" asp-action="Index" class="menu-link">
                                 <i class="menu-icon bx bx-food-menu"></i>
                                 <div>Cocina</div>
                             </a>
@@ -141,8 +153,8 @@
                     <!-- CAJERO -->
                     @if (User.IsInRole("Cajero"))
                     {
-                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Facturas" ? "active" : "")">
-                            <a asp-controller="Facturas" asp-action="Index" class="menu-link">
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Cajero" ? "active" : "")">
+                            <a asp-controller="Cajero" asp-action="Index" class="menu-link">
                                 <i class="menu-icon bx bx-dollar-circle"></i>
                                 <div>Cobros</div>
                             </a>
@@ -152,8 +164,8 @@
                     <!-- CONTABILIDAD -->
                     @if (User.IsInRole("Contabilidad"))
                     {
-                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Facturas" ? "active" : "")">
-                            <a asp-controller="Facturas" asp-action="Index" class="menu-link">
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Contabilidad" ? "active" : "")">
+                            <a asp-controller="Contabilidad" asp-action="Index" class="menu-link">
                                 <i class="menu-icon bx bx-line-chart"></i>
                                 <div>Historial</div>
                             </a>
@@ -167,6 +179,20 @@
                             <a asp-controller="Pedidos" asp-action="Create" class="menu-link">
                                 <i class="menu-icon bx bx-cart"></i>
                                 <div>Hacer Pedido</div>
+                            </a>
+                        </li>
+
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "MiCuenta" && ViewContext.RouteData.Values["action"]?.ToString() == "MisDatos" ? "active" : "")">
+                            <a asp-controller="MiCuenta" asp-action="MisDatos" class="menu-link">
+                                <i class="menu-icon bx bx-user-circle"></i>
+                                <div>Mis Datos</div>
+                            </a>
+                        </li>
+
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "MiCuenta" && ViewContext.RouteData.Values["action"]?.ToString() == "MiHistorial" ? "active" : "")">
+                            <a asp-controller="MiCuenta" asp-action="MiHistorial" class="menu-link">
+                                <i class="menu-icon bx bx-history"></i>
+                                <div>Mi Historial</div>
                             </a>
                         </li>
                     }

@@ -1,26 +1,31 @@
-﻿using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using proyectoprogra.Data;
+using proyectoprogra.Models;
 using proyectoprogra.Models.Entities;
-using DinkToPdf;
-using DinkToPdf.Contracts;
+using proyectoprogra.Services;
+using System.Security.Claims;
 
 public class FacturasController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly IConverter _converter;
+    private readonly FacturaPdfService _pdfService;
     private readonly IEmailSender _emailSender;
+    private readonly UserManager<ApplicationUser> _userManager;
 
     public FacturasController(
         ApplicationDbContext context,
-        IConverter converter,
-        IEmailSender emailSender)
+        FacturaPdfService pdfService,
+        IEmailSender emailSender,
+        UserManager<ApplicationUser> userManager)
     {
-        _context = context;
-        _converter = converter;
+        _context    = context;
+        _pdfService = pdfService;
         _emailSender = emailSender;
+        _userManager = userManager;
     }
 
     // 🔥 INDEX
@@ -69,13 +74,37 @@ public class FacturasController : Controller
         if (pedido == null)
             return NotFound();
 
+        // Pre-calculate auto values so the view can display them
+        decimal subtotal = pedido.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+        bool esMesa = pedido.MesaId.HasValue;
+
+        ViewBag.EsMesa = esMesa;
+        ViewBag.PropinaAuto = esMesa ? Math.Round(subtotal * 0.10m, 2) : 0m;
+        ViewBag.CostoEmpaqueAuto = !esMesa
+            ? pedido.PedidoDetalles
+                .Where(d => d.Producto!.RequiereEmpaque)
+                .Sum(d => (d.Producto!.CostoEmpaque ?? 0) * d.Cantidad)
+            : 0m;
+
+        // Current user's available credit
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId != null)
+        {
+            var usuario = await _userManager.FindByIdAsync(userId);
+            ViewBag.DineroDisponible = usuario?.DineroDisponible ?? 0m;
+        }
+        else
+        {
+            ViewBag.DineroDisponible = 0m;
+        }
+
         return View(pedido);
     }
 
     // 🔥 CREATE (POST)
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(int pedidoId, decimal? propina, decimal? costoEmpaque, decimal? costoDelivery, string? emailCliente)
+    public async Task<IActionResult> Create(int pedidoId, decimal? costoDelivery, string? emailCliente)
     {
         var pedido = await _context.Pedidos
             .Include(p => p.PedidoDetalles)
@@ -104,25 +133,67 @@ public class FacturasController : Controller
             return View(pedido);
         }
 
-        decimal subtotal = pedido.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
-        decimal iva = subtotal * 0.13m;
-        decimal prop = propina ?? 0;
-        decimal empaque = costoEmpaque ?? 0;
-        decimal delivery = costoDelivery ?? 0;
-        decimal total = subtotal + iva + prop + empaque + delivery;
+        // ── Stock validation ──────────────────────────────────────────────────
+        foreach (var detalle in pedido.PedidoDetalles)
+        {
+            if (detalle.Producto == null) continue;
+            if (detalle.Producto.Stock < detalle.Cantidad)
+            {
+                ViewBag.Pedidos = new SelectList(await _context.Pedidos.ToListAsync(), "PedidoId", "PedidoId", pedidoId);
+                ModelState.AddModelError("",
+                    $"Stock insuficiente para \"{detalle.Producto.Nombre}\". " +
+                    $"Disponible: {detalle.Producto.Stock}, Requerido: {detalle.Cantidad}.");
+                return View(pedido);
+            }
+        }
 
+        // ── Auto-calculate totals ─────────────────────────────────────────────
+        decimal subtotal = pedido.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+        decimal iva      = subtotal * 0.13m;
+        bool esMesa      = pedido.MesaId.HasValue;
+
+        // 10% auto-tip for dine-in orders
+        decimal propina = esMesa ? Math.Round(subtotal * 0.10m, 2) : 0m;
+
+        // Packaging cost for takeout: sum per-product CostoEmpaque × Cantidad
+        decimal empaque = !esMesa
+            ? pedido.PedidoDetalles
+                .Where(d => d.Producto!.RequiereEmpaque)
+                .Sum(d => (d.Producto!.CostoEmpaque ?? 0) * d.Cantidad)
+            : 0m;
+
+        decimal delivery = costoDelivery ?? 0m;
+        decimal total    = subtotal + iva + propina + empaque + delivery;
+
+        // ── Current user ──────────────────────────────────────────────────────
+        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        ApplicationUser? usuario = userId != null
+            ? await _userManager.FindByIdAsync(userId)
+            : null;
+
+        // ── Apply DineroDisponible credit ─────────────────────────────────────
+        decimal creditoAplicado = 0m;
+        if (usuario != null && usuario.DineroDisponible > 0)
+        {
+            creditoAplicado            = Math.Min(usuario.DineroDisponible, total);
+            total                     -= creditoAplicado;
+            usuario.DineroDisponible  -= creditoAplicado;
+        }
+
+        // ── Persist factura ───────────────────────────────────────────────────
         var factura = new Factura
         {
-            NumeroFactura = $"FAC-{DateTime.Now:yyyyMMddHHmmss}",
-            PedidoId = pedidoId,
-            Fecha = DateTime.Now,
-            Subtotal = subtotal,
-            Iva = iva,
-            Propina = prop,
-            CostoEmpaque = empaque,
-            CostoDelivery = delivery,
-            Total = total,
-            UsuarioId = null
+            NumeroFactura  = $"FAC-{DateTime.Now:yyyyMMddHHmmss}",
+            PedidoId       = pedidoId,
+            Fecha          = DateTime.Now,
+            Subtotal       = subtotal,
+            Iva            = iva,
+            Propina        = propina,
+            CostoEmpaque   = empaque,
+            CostoDelivery  = delivery,
+            CreditoAplicado = creditoAplicado,
+            Total          = total,
+            UsuarioId      = userId
         };
 
         _context.Facturas.Add(factura);
@@ -132,17 +203,28 @@ public class FacturasController : Controller
         {
             _context.FacturaDetalles.Add(new FacturaDetalle
             {
-                FacturaId = factura.FacturaId,
-                ProductoId = d.ProductoId,
-                Cantidad = d.Cantidad,
+                FacturaId      = factura.FacturaId,
+                ProductoId     = d.ProductoId,
+                Cantidad       = d.Cantidad,
                 PrecioUnitario = d.PrecioUnitario,
-                TotalLinea = d.Cantidad * d.PrecioUnitario
+                TotalLinea     = d.Cantidad * d.PrecioUnitario
             });
         }
 
+        // ── Deduct stock ──────────────────────────────────────────────────────
+        foreach (var detalle in pedido.PedidoDetalles)
+        {
+            if (detalle.Producto == null) continue;
+            detalle.Producto.Stock -= detalle.Cantidad;
+        }
+
+        // ── Persist credit change on user ─────────────────────────────────────
+        if (usuario != null && creditoAplicado > 0)
+            await _userManager.UpdateAsync(usuario);
+
         await _context.SaveChangesAsync();
 
-        // Send billing notification email to the client
+        // ── Email ─────────────────────────────────────────────────────────────
         if (!string.IsNullOrWhiteSpace(emailCliente))
         {
             var html = BuildFacturaEmail(factura, emailCliente.Trim());
@@ -152,7 +234,8 @@ public class FacturasController : Controller
                 html);
         }
 
-        TempData["Success"] = $"Factura {factura.NumeroFactura} creada correctamente.";
+        TempData["Success"] = $"Factura {factura.NumeroFactura} creada correctamente." +
+            (creditoAplicado > 0 ? $" Se aplicó ₡{creditoAplicado:N2} de crédito." : "");
         return RedirectToAction(nameof(Index));
     }
 
@@ -179,13 +262,14 @@ public class FacturasController : Controller
         if (facturaDb == null)
             return NotFound();
 
-        facturaDb.Propina = factura.Propina ?? 0;
-        facturaDb.CostoEmpaque = factura.CostoEmpaque ?? 0;
+        facturaDb.Propina       = factura.Propina ?? 0;
+        facturaDb.CostoEmpaque  = factura.CostoEmpaque ?? 0;
         facturaDb.CostoDelivery = factura.CostoDelivery ?? 0;
-        facturaDb.Total = facturaDb.Subtotal + facturaDb.Iva +
-                   (facturaDb.Propina ?? 0) +
-                   (facturaDb.CostoEmpaque ?? 0) +
-                   (facturaDb.CostoDelivery ?? 0);
+        facturaDb.Total         = facturaDb.Subtotal + facturaDb.Iva +
+                                  (facturaDb.Propina      ?? 0) +
+                                  (facturaDb.CostoEmpaque ?? 0) +
+                                  (facturaDb.CostoDelivery ?? 0) -
+                                  facturaDb.CreditoAplicado;
 
         await _context.SaveChangesAsync();
         return RedirectToAction(nameof(Index));
@@ -306,30 +390,15 @@ public class FacturasController : Controller
     public async Task<IActionResult> Pdf(int id)
     {
         var factura = await _context.Facturas
+            .Include(f => f.Pedido)
             .Include(f => f.FacturaDetalles)
-            .ThenInclude(fd => fd.Producto)
+                .ThenInclude(fd => fd.Producto)
             .FirstOrDefaultAsync(f => f.FacturaId == id);
 
         if (factura == null)
             return NotFound();
 
-        var html = await this.RenderViewAsync("FacturaPdf", factura);
-
-        var doc = new HtmlToPdfDocument()
-        {
-            GlobalSettings = {
-                PaperSize = PaperKind.A4
-            },
-            Objects = {
-                new ObjectSettings()
-                {
-                    HtmlContent = html
-                }
-            }
-        };
-
-        var pdf = _converter.Convert(doc);
-
-        return File(pdf, "application/pdf");
+        var pdf = _pdfService.Generate(factura);
+        return File(pdf, "application/pdf", $"{factura.NumeroFactura}.pdf");
     }
 }

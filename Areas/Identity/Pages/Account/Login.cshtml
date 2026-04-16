@@ -49,9 +49,15 @@
 
                 <div id="passkeyAlert" class="alert d-none mb-2"></div>
 
+                <div class="d-grid mb-3">
+                    <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl"
+                       class="btn btn-lg btn-outline-primary">
+                        <i class="bx bx-user-plus me-1"></i> Crear cuenta
+                    </a>
+                </div>
+
                 <div>
                     <p><a id="forgot-password" asp-page="./ForgotPassword">¿Olvidaste tu contraseña?</a></p>
-                    <p><a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Crear cuenta</a></p>
                     <p><a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Reenviar confirmación</a></p>
                 </div>
             </form>

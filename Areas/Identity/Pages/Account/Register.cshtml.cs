@@ -114,6 +114,12 @@ namespace proyectoprogra.Areas.Identity.Pages.Account
 
                 var user = CreateUser();
 
+                user.Identificacion    = Input.Identificacion;
+                user.NombreCompleto    = Input.NombreCompleto;
+                user.Genero            = Input.Genero;
+                user.TipoTarjeta       = Input.TipoTarjeta;
+                user.Ultimos4Tarjeta   = ultimos4;
+
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
 
@@ -122,21 +128,6 @@ namespace proyectoprogra.Areas.Identity.Pages.Account
                 if (result.Succeeded)
                 {
                     _logger.LogInformation("Usuario creado correctamente.");
-
-                    // 🔥 GUARDAR DATOS EXTRA
-                    var extra = new UsuarioExtra
-                    {
-                        UserId = user.Id,
-                        Identificacion = Input.Identificacion,
-                        NombreCompleto = Input.NombreCompleto,
-                        Genero = Input.Genero,
-                        TipoTarjeta = Input.TipoTarjeta,
-                        Ultimos4Tarjeta = $"****-****-****-{ultimos4}",
-                        DineroDisponible = 0
-                    };
-
-                    _context.UsuariosExtra.Add(extra);
-                    await _context.SaveChangesAsync();
 
                     // 🔥 ASIGNAR ROL
                     await _userManager.AddToRoleAsync(user, "Usuario");

@@ -142,12 +142,19 @@ namespace proyectoprogra.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var categoria = await _context.Categorias.FindAsync(id);
-            if (categoria != null)
+            if (categoria == null) return RedirectToAction(nameof(Index));
+
+            // Validación: la categoría tiene productos asociados
+            bool tieneProductos = await _context.Productos.AnyAsync(p => p.CategoriaId == id);
+            if (tieneProductos)
             {
-                _context.Categorias.Remove(categoria);
+                TempData["Error"] = "No se puede eliminar esta categoría porque tiene productos asociados. Reasigne o elimine los productos primero.";
+                return RedirectToAction(nameof(Delete), new { id });
             }
 
+            _context.Categorias.Remove(categoria);
             await _context.SaveChangesAsync();
+            TempData["Exito"] = $"La categoría \"{categoria.Descripcion}\" fue eliminada correctamente.";
             return RedirectToAction(nameof(Index));
         }
 

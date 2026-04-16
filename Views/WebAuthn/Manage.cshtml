@@ -1,0 +1,163 @@
+@model IEnumerable<proyectoprogra.Models.Entities.FidoStoredCredential>
+
+@{
+    ViewData["Title"] = "Mis Passkeys";
+}
+
+<div class="container-xxl flex-grow-1 container-p-y">
+
+    <h4 class="fw-bold py-3 mb-4">
+        <i class="bx bx-fingerprint me-2 text-primary"></i> Mis Passkeys
+    </h4>
+
+    <div class="row">
+        <div class="col-md-8">
+
+            <!-- Registered passkeys -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Passkeys registrados</h5>
+                </div>
+                <div class="card-body">
+                    @if (!Model.Any())
+                    {
+                        <p class="text-muted mb-0">No tienes ningún passkey registrado.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-borderless">
+                            <thead>
+                                <tr>
+                                    <th>Dispositivo</th>
+                                    <th>Registrado</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var cred in Model)
+                                {
+                                    <tr>
+                                        <td>
+                                            <i class="bx bx-mobile-alt me-1 text-primary"></i>
+                                            @cred.CredType — <small class="text-muted">@cred.AaGuid</small>
+                                        </td>
+                                        <td>@cred.RegDate.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>
+                                            <form asp-action="DeleteCredential" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@cred.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('¿Eliminar este passkey?')">
+                                                    <i class="bx bx-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+
+            <!-- Register new passkey -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Registrar nuevo passkey</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Registra tu dispositivo actual (huella, Face ID o PIN) como método de inicio de sesión
+                        sin contraseña.
+                    </p>
+                    <div id="registerStatus" class="alert d-none mb-3"></div>
+                    <button id="btnRegister" class="btn btn-primary">
+                        <i class="bx bx-fingerprint me-1"></i> Registrar passkey
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+    // Base64url helpers
+    function b64urlDecode(b64) {
+        const b = b64.replace(/-/g, '+').replace(/_/g, '/');
+        const bin = atob(b);
+        return Uint8Array.from(bin, c => c.charCodeAt(0)).buffer;
+    }
+    function b64urlEncode(buf) {
+        return btoa(String.fromCharCode(...new Uint8Array(buf)))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    function showStatus(msg, ok) {
+        const el = document.getElementById('registerStatus');
+        el.textContent = msg;
+        el.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger');
+    }
+
+    document.getElementById('btnRegister').addEventListener('click', async () => {
+        const btn = document.getElementById('btnRegister');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
+
+        try {
+            // Step 1 – get options from server
+            const optRes = await fetch('/WebAuthn/MakeCredentialOptions', { method: 'POST' });
+            if (!optRes.ok) { showStatus('Error al obtener opciones.', false); return; }
+            const options = await optRes.json();
+
+            // Decode binary fields
+            options.challenge = b64urlDecode(options.challenge);
+            options.user.id   = b64urlDecode(options.user.id);
+            if (options.excludeCredentials) {
+                options.excludeCredentials = options.excludeCredentials.map(c => ({
+                    ...c, id: b64urlDecode(c.id)
+                }));
+            }
+
+            // Step 2 – browser prompts biometric/PIN
+            const cred = await navigator.credentials.create({ publicKey: options });
+
+            // Step 3 – encode and send to server
+            const payload = {
+                id:    cred.id,
+                rawId: b64urlEncode(cred.rawId),
+                type:  cred.type,
+                response: {
+                    attestationObject: b64urlEncode(cred.response.attestationObject),
+                    clientDataJSON:    b64urlEncode(cred.response.clientDataJSON)
+                }
+            };
+
+            const saveRes = await fetch('/WebAuthn/MakeCredential', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify(payload)
+            });
+
+            if (saveRes.ok) {
+                showStatus('Passkey registrado correctamente.', true);
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                const err = await saveRes.json();
+                showStatus('Error: ' + (err.error ?? 'Desconocido'), false);
+            }
+        } catch (e) {
+            if (e.name === 'NotAllowedError') {
+                showStatus('Operación cancelada.', false);
+            } else {
+                showStatus('Error: ' + e.message, false);
+            }
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-fingerprint me-1"></i> Registrar passkey';
+        }
+    });
+</script>
+}

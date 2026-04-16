@@ -1,0 +1,100 @@
+@model proyectoprogra.Models.ViewModels.MisDatosViewModel
+
+@{
+    ViewData["Title"] = "Mis Datos";
+}
+
+<div class="row justify-content-center">
+    <div class="col-12 col-lg-7">
+
+        <div class="row mb-4 align-items-center">
+            <div class="col">
+                <h4 class="fw-bold mb-0">
+                    <i class="bx bx-user-circle me-2 text-primary"></i>Mis Datos
+                </h4>
+                <p class="text-muted mb-0 small">Actualice su información personal</p>
+            </div>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+                <i class="bx bx-check-circle me-1"></i>@TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form asp-action="MisDatos" method="post">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3" style="display:@(ViewData.ModelState.ErrorCount > 0 ? "block" : "none")"></div>
+
+                    <!-- Nombre -->
+                    <div class="mb-3">
+                        <label asp-for="NombreCompleto" class="form-label fw-medium"></label>
+                        <input asp-for="NombreCompleto" class="form-control" placeholder="Su nombre completo" />
+                        <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Género -->
+                    <div class="mb-3">
+                        <label asp-for="Genero" class="form-label fw-medium"></label>
+                        <select asp-for="Genero" class="form-select">
+                            <option value="Masculino">Masculino</option>
+                            <option value="Femenino">Femenino</option>
+                            <option value="No especifica">No especifica</option>
+                        </select>
+                        <span asp-validation-for="Genero" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-medium"></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bx bx-envelope"></i></span>
+                            <input asp-for="Email" class="form-control" type="email" placeholder="correo@ejemplo.com" />
+                        </div>
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Tipo de Tarjeta -->
+                    <div class="mb-3">
+                        <label asp-for="TipoTarjeta" class="form-label fw-medium"></label>
+                        <select asp-for="TipoTarjeta" class="form-select">
+                            <option value="VISA">VISA</option>
+                            <option value="MASTERCARD">MASTERCARD</option>
+                            <option value="AMERICAN EXPRESS">AMERICAN EXPRESS</option>
+                        </select>
+                        <span asp-validation-for="TipoTarjeta" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Número de Tarjeta -->
+                    <div class="mb-4">
+                        <label asp-for="NumeroTarjeta" class="form-label fw-medium"></label>
+                        <input asp-for="NumeroTarjeta" class="form-control"
+                               placeholder="0000-0000-0000-0000 (dejar vacío para no cambiar)" />
+                        <div class="form-text">
+                            Se almacenarán solo los últimos 4 dígitos enmascarados. Deje vacío para no modificar la tarjeta actual.
+                        </div>
+                        <span asp-validation-for="NumeroTarjeta" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bx bx-save me-1"></i>Guardar Cambios
+                        </button>
+                        <a asp-action="MiHistorial" class="btn btn-outline-secondary">
+                            <i class="bx bx-history me-1"></i>Mi Historial
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    @{ await Html.RenderPartialAsync("_ValidationScriptsPartial"); }
+}

@@ -1,0 +1,86 @@
+@model proyectoprogra.Models.Entities.Factura
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <style>
+        body { font-family: Arial, sans-serif; padding: 24px; color: #333; }
+        h1 { text-align: center; color: #696cff; margin-bottom: 4px; }
+        .sub { text-align: center; color: #888; margin-top: 0; font-size: 13px; }
+        hr { border: 1px solid #ddd; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+        th { background: #696cff; color: #fff; padding: 8px 10px; text-align: left; }
+        td { padding: 8px 10px; border-bottom: 1px solid #eee; }
+        .totals { margin-top: 20px; float: right; width: 260px; }
+        .totals table td { border: none; padding: 4px 8px; }
+        .totals .total-row td { font-weight: bold; font-size: 16px; color: #696cff; border-top: 2px solid #696cff; }
+        .footer { margin-top: 60px; text-align: center; font-size: 11px; color: #aaa; }
+    </style>
+</head>
+<body>
+
+    <h1>RestauranteApp</h1>
+    <p class="sub">Factura Electrónica</p>
+    <hr />
+
+    <p><strong>Número:</strong> @Model.NumeroFactura</p>
+    <p><strong>Fecha:</strong> @Model.Fecha.ToString("dd/MM/yyyy HH:mm")</p>
+    <p><strong>Pedido:</strong> #@Model.PedidoId</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th style="text-align:center">Cant.</th>
+                <th style="text-align:right">Precio Unit.</th>
+                <th style="text-align:right">Total Línea</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var d in Model.FacturaDetalles)
+            {
+                <tr>
+                    <td>@d.Producto?.Nombre</td>
+                    <td style="text-align:center">@d.Cantidad</td>
+                    <td style="text-align:right">₡@d.PrecioUnitario.ToString("N2")</td>
+                    <td style="text-align:right">₡@d.TotalLinea.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <table>
+            <tr><td>Subtotal</td><td style="text-align:right">₡@Model.Subtotal.ToString("N2")</td></tr>
+            <tr><td>IVA (13%)</td><td style="text-align:right">₡@Model.Iva.ToString("N2")</td></tr>
+            @if (Model.Propina > 0)
+            {
+                <tr><td>Propina (10%)</td><td style="text-align:right">₡@Model.Propina?.ToString("N2")</td></tr>
+            }
+            @if (Model.CostoEmpaque > 0)
+            {
+                <tr><td>Empaque</td><td style="text-align:right">₡@Model.CostoEmpaque?.ToString("N2")</td></tr>
+            }
+            @if (Model.CostoDelivery > 0)
+            {
+                <tr><td>Delivery</td><td style="text-align:right">₡@Model.CostoDelivery?.ToString("N2")</td></tr>
+            }
+            @if (Model.CreditoAplicado > 0)
+            {
+                <tr><td style="color:green">Crédito aplicado</td><td style="text-align:right;color:green">–₡@Model.CreditoAplicado.ToString("N2")</td></tr>
+            }
+            <tr class="total-row">
+                <td>TOTAL</td>
+                <td style="text-align:right">₡@Model.Total.ToString("N2")</td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="clear:both"></div>
+    <div class="footer">
+        Documento generado por RestauranteApp &bull; Gracias por su preferencia
+    </div>
+
+</body>
+</html>

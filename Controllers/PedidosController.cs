@@ -128,6 +128,29 @@ namespace proyectoprogra.Controllers
                 if (producto == null)
                     continue;
 
+                if (producto.Stock < item.Cantidad)
+                {
+                    ModelState.AddModelError("", $"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}, solicitado: {item.Cantidad}.");
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                // Roll back the pedido we already saved
+                _context.Pedidos.Remove(pedido);
+                await _context.SaveChangesAsync();
+                ViewData["MesaId"] = new SelectList(_context.Mesas, "MesaId", "MesaId", MesaId);
+                ViewData["Productos"] = _context.Productos.ToList();
+                return View();
+            }
+
+            foreach (var item in items)
+            {
+                var producto = await _context.Productos.FindAsync(item.ProductoId);
+
+                if (producto == null)
+                    continue;
+
                 _context.PedidoDetalles.Add(new PedidoDetalle
                 {
                     PedidoId = pedido.PedidoId,
@@ -191,6 +214,24 @@ namespace proyectoprogra.Controllers
             _context.PedidoDetalles.RemoveRange(pedidoDb.PedidoDetalles);
 
             // 🔥 crear nuevos
+            foreach (var item in items)
+            {
+                var producto = await _context.Productos.FindAsync(item.ProductoId);
+                if (producto == null) continue;
+
+                if (producto.Stock < item.Cantidad)
+                {
+                    ModelState.AddModelError("", $"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}, solicitado: {item.Cantidad}.");
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                ViewData["MesaId"] = new SelectList(_context.Mesas, "MesaId", "MesaId", pedidoDb.MesaId);
+                ViewData["Productos"] = _context.Productos.ToList();
+                return View(pedidoDb);
+            }
+
             foreach (var item in items)
             {
                 var producto = await _context.Productos.FindAsync(item.ProductoId);

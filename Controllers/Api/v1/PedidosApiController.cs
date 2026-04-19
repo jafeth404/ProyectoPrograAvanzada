@@ -103,6 +103,15 @@ namespace proyectoprogra.Controllers.Api.v1
             if (productos.Count != productoIds.Count)
                 return BadRequest(ApiResponse<object>.Fail("Uno o más productos no existen."));
 
+            var stockErrors = req.Detalles
+                .Select(d => new { det = d, prod = productos.First(p => p.ProductoId == d.ProductoId) })
+                .Where(x => x.prod.Stock < x.det.Cantidad)
+                .Select(x => $"Stock insuficiente para '{x.prod.Nombre}'. Disponible: {x.prod.Stock}, solicitado: {x.det.Cantidad}.")
+                .ToList();
+
+            if (stockErrors.Any())
+                return BadRequest(ApiResponse<object>.Fail("Stock insuficiente.", stockErrors));
+
             var pedido = new Pedido
             {
                 TipoPedido = req.TipoPedido,

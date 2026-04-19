@@ -9,9 +9,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace proyectoprogra.Controllers
 {
+    [Authorize]
     public class PedidosController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -24,13 +27,20 @@ namespace proyectoprogra.Controllers
         // GET: Pedidos
         public async Task<IActionResult> Index()
         {
-            var pedidos = await _context.Pedidos
+            var query = _context.Pedidos
                 .Include(p => p.Mesa)
                 .Include(p => p.PedidoDetalles)
-                .ThenInclude(d => d.Producto)
-                .ToListAsync();
+                    .ThenInclude(d => d.Producto)
+                .AsQueryable();
 
-            return View(pedidos);
+            // Web users only see their own orders
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+            {
+                var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                query = query.Where(p => p.UsuarioId == uid);
+            }
+
+            return View(await query.OrderByDescending(p => p.Fecha).ToListAsync());
         }
 
         // GET: Pedidos/Details/5
@@ -70,16 +80,26 @@ namespace proyectoprogra.Controllers
                 ModelState.AddModelError("", "Debe seleccionar el tipo de pedido");
             }
 
+            // Usuario (web) restrictions
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+            {
+                if (TipoPedido == "Dine-in")
+                    ModelState.AddModelError("", "Los usuarios web no pueden realizar pedidos Dine-in.");
+
+                // Force estado to Pendiente regardless of what was submitted
+                Estado = "Pendiente";
+            }
+
             var items = string.IsNullOrEmpty(ItemsJson)
                 ? new List<ItemPedidoVM>()
                 : JsonSerializer.Deserialize<List<ItemPedidoVM>>(ItemsJson);
 
-            // 🔥 limpiar basura
-            items = items.Where(i => i.ProductoId > 0 && i.Cantidad > 0).ToList();
+            // Strip any item that has no product or quantity < 1
+            items = items.Where(i => i.ProductoId > 0 && i.Cantidad >= 1).ToList();
 
             if (!items.Any())
             {
-                ModelState.AddModelError("", "Debe agregar al menos un producto válido");
+                ModelState.AddModelError("", "Debe agregar al menos un producto con cantidad mínima de 1.");
             }
 
             if (!ModelState.IsValid)
@@ -91,10 +111,11 @@ namespace proyectoprogra.Controllers
 
             var pedido = new Pedido
             {
-                MesaId = MesaId,
+                MesaId = MesaId == 0 ? null : MesaId,
                 Fecha = DateTime.Now,
                 TipoPedido = TipoPedido,
-                Estado = Estado
+                Estado = Estado,
+                UsuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier)
             };
 
             _context.Pedidos.Add(pedido);
@@ -124,6 +145,8 @@ namespace proyectoprogra.Controllers
         // GET: Pedidos/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return Forbid();
             if (id == null)
                 return NotFound();
 
@@ -148,6 +171,8 @@ namespace proyectoprogra.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Pedido pedido, string ItemsJson)
         {
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return Forbid();
             var pedidoDb = await _context.Pedidos
                 .Include(p => p.PedidoDetalles)
                 .FirstOrDefaultAsync(p => p.PedidoId == id);
@@ -189,6 +214,8 @@ namespace proyectoprogra.Controllers
         // GET: Pedidos/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return Forbid();
             if (id == null)
                 return NotFound();
 
@@ -209,6 +236,8 @@ namespace proyectoprogra.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return Forbid();
             var pedido = await _context.Pedidos
             .Include(p => p.Mesa)
             .Include(p => p.PedidoDetalles)

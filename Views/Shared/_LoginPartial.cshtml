@@ -2,27 +2,29 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
-<ul class="navbar-nav">
+<ul class="navbar-nav align-items-center">
 @if (SignInManager.IsSignedIn(User))
 {
-    <li class="nav-item">
-            <span class="fw-semibold">
-                Hola @User.Identity?.Name!
-            </span>
+    var currentUser = await UserManager.GetUserAsync(User);
+    var displayName = currentUser?.NombreCompleto ?? User.Identity?.Name ?? "";
+    <li class="nav-item me-1">
+        <span class="navbar-user-greeting">
+            <i class="bx bx-user-circle me-1"></i>@displayName
+        </span>
     </li>
     <li class="nav-item">
         <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
-            <button type="submit" class="nav-link btn btn-link" style="color: inherit;">Logout</button>
+            <button type="submit" class="nav-link btn btn-link navbar-logout-btn">Cerrar sesión</button>
         </form>
     </li>
 }
 else
 {
     <li class="nav-item">
-        <a class="nav-link" style="color: inherit;" asp-area="Identity" asp-page="/Account/Register">Register</a>
+        <a class="nav-link" asp-area="Identity" asp-page="/Account/Register">Registrarse</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" style="color: inherit;" asp-area="Identity" asp-page="/Account/Login">Login</a>
+        <a class="nav-link" asp-area="Identity" asp-page="/Account/Login">Iniciar sesión</a>
     </li>
 }
 </ul>

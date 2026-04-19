@@ -12,22 +12,37 @@
 
         <div class="mb-3">
             <label>Tipo Pedido</label>
-            <input name="TipoPedido" class="form-control" required />
+            <select name="TipoPedido" id="TipoPedido" class="form-control" required>
+                <option value="">— Seleccione —</option>
+                @if (!User.IsInRole("Usuario") || User.IsInRole("Administrador"))
+                {
+                    <option value="Dine-in">Dine-in (Mesa)</option>
+                }
+                <option value="Takeout">Para llevar (Takeout)</option>
+                <option value="Delivery">Delivery</option>
+            </select>
         </div>
 
-        <div class="mb-3">
+        <div class="mb-3" id="mesaRow" style="display:none">
             <label>Mesa</label>
             <select name="MesaId" class="form-control" asp-items="ViewBag.MesaId"></select>
         </div>
 
-        <div class="mb-3">
-            <label>Estado</label>
-            <select name="Estado" class="form-control">
-                <option value="Pendiente">Pendiente</option>
-                <option value="En proceso">En proceso</option>
-                <option value="Completo">Completo</option>
-            </select>
-        </div>
+        @if (!User.IsInRole("Usuario") || User.IsInRole("Administrador"))
+        {
+            <div class="mb-3">
+                <label>Estado</label>
+                <select name="Estado" class="form-control">
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En proceso">En proceso</option>
+                    <option value="Completo">Completo</option>
+                </select>
+            </div>
+        }
+        else
+        {
+            <input type="hidden" name="Estado" value="Pendiente" />
+        }
 
     </div>
 
@@ -49,7 +64,7 @@
             </div>
 
             <div class="col-md-3">
-                <input type="number" id="cantidadInput" class="form-control" placeholder="Cantidad" min="1" />
+                <input type="number" id="cantidadInput" class="form-control" placeholder="Cantidad" min="1" step="1" />
             </div>
 
             <div class="col-md-2">
@@ -86,10 +101,15 @@ let items = [];
 
 function agregarProducto() {
     const select = document.getElementById("productoSelect");
-    const cantidad = parseInt(document.getElementById("cantidadInput").value);
+    const cantidadRaw = document.getElementById("cantidadInput").value.trim();
+    const cantidad = parseInt(cantidadRaw, 10);
 
-    if (!select.value || cantidad <= 0) {
-        alert("Seleccione producto y cantidad válida");
+    if (!select.value) {
+        alert("Seleccione un producto.");
+        return;
+    }
+    if (!cantidadRaw || isNaN(cantidad) || cantidad < 1) {
+        alert("La cantidad debe ser un número entero mayor o igual a 1.");
         return;
     }
 
@@ -146,15 +166,17 @@ function beforeSubmit() {
     return true;
 }
 document.getElementById("pedidoForm").addEventListener("submit", function (e) {
-
     if (items.length === 0) {
         alert("Debe agregar al menos un producto");
         e.preventDefault();
         return;
     }
-
     document.getElementById("ItemsJson").value = JSON.stringify(items);
+});
 
-    console.log("ENVIANDO:", items);
+// Show/hide mesa selector based on order type
+document.getElementById("TipoPedido").addEventListener("change", function () {
+    document.getElementById("mesaRow").style.display =
+        this.value === "Dine-in" ? "" : "none";
 });
 </script>

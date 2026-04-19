@@ -24,6 +24,8 @@ namespace proyectoprogra.Data
 
         public DbSet<FidoStoredCredential> FidoCredentials { get; set; }
 
+        public DbSet<ConfiguracionSistema> ConfiguracionSistema { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

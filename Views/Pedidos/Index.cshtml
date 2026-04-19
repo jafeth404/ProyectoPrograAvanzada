@@ -34,18 +34,21 @@
         <td>₡@total</td>
 
         <td>
-            <a asp-action="Edit" asp-route-id="@item.PedidoId" class="btn btn-sm btn-primary">Edit</a>
-            <a asp-action="Details" asp-route-id="@item.PedidoId" class="btn btn-sm btn-info">Details</a>
-            <a asp-action="Delete" asp-route-id="@item.PedidoId" class="btn btn-sm btn-danger">Delete</a>
-            @if (item.PedidoDetalles != null && item.PedidoDetalles.Any())
-    {
-        <a asp-controller="Facturas"
-           asp-action="Create"
-           asp-route-pedidoId="@item.PedidoId"
-           class="btn btn-sm btn-success">
-            Facturar
-        </a>
-    }
+            <a asp-action="Details" asp-route-id="@item.PedidoId" class="btn btn-sm btn-info">Detalles</a>
+            @if (!User.IsInRole("Usuario") || User.IsInRole("Administrador"))
+            {
+                <a asp-action="Edit" asp-route-id="@item.PedidoId" class="btn btn-sm btn-primary">Editar</a>
+                <a asp-action="Delete" asp-route-id="@item.PedidoId" class="btn btn-sm btn-danger">Eliminar</a>
+                @if (item.PedidoDetalles != null && item.PedidoDetalles.Any())
+                {
+                    <a asp-controller="Facturas"
+                       asp-action="Create"
+                       asp-route-pedidoId="@item.PedidoId"
+                       class="btn btn-sm btn-success">
+                        Facturar
+                    </a>
+                }
+            }
         </td>
     </tr>
 }

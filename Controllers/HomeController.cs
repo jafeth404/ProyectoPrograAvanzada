@@ -18,6 +18,10 @@ namespace proyectoprogra.Controllers
 
         public IActionResult Index()
         {
+            // Usuario (web) has no dashboard — send straight to their order page
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return RedirectToAction("Create", "Pedidos");
+
             // TARJETAS DEL DASHBOARD
             ViewBag.TotalProductos = _context.Productos.Count();
             ViewBag.TotalPedidos = _context.Pedidos.Count();

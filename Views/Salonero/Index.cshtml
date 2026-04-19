@@ -100,13 +100,14 @@ else
     </div>
 }
 
+@* Hidden form so JS can reliably read the antiforgery token *@
+<form id="__afTokenForm" style="display:none">@Html.AntiForgeryToken()</form>
+
 @section Scripts {
 <script>
-    const tokenInput = document.createElement('div');
-    tokenInput.innerHTML = '@Html.AntiForgeryToken()';
-    const tokenValue = tokenInput.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const tokenValue = document.querySelector('#__afTokenForm input[name="__RequestVerificationToken"]')?.value ?? '';
 
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', async function (e) {
         const btn = e.target.closest('.btn-enviar');
         if (!btn) return;
 
@@ -114,36 +115,41 @@ else
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando…';
 
-        fetch('/Salonero/EnviarACocina', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'RequestVerificationToken': tokenValue
-            },
-            body: JSON.stringify({ pedidoId })
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (!data.success) {
-                alert(data.message ?? 'Error al enviar el pedido.');
+        try {
+            const r = await fetch('/Salonero/EnviarACocina', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': tokenValue
+                },
+                body: JSON.stringify({ pedidoId })
+            });
+
+            let data;
+            try { data = await r.json(); }
+            catch { data = { success: false, message: `Error del servidor (${r.status}).` }; }
+
+            if (!r.ok || !data.success) {
+                alert(data.message ?? `Error del servidor (${r.status}).`);
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bx bx-send me-1"></i>Enviar a Cocina';
                 return;
             }
+
             // Replace button with "Enviado" indicator
             btn.closest('td').innerHTML =
                 '<span class="text-success small"><i class="bx bx-check me-1"></i>Enviado</span>';
+
             // Update status badge in the same row
-            const row = btn.closest('tr');
-            const estadoCell = row.querySelector('td:nth-child(4)');
+            const estadoCell = btn.closest('tr').querySelector('td:nth-child(4)');
             if (estadoCell)
                 estadoCell.innerHTML = '<span class="badge bg-label-warning">En Cocina</span>';
-        })
-        .catch(() => {
-            alert('Error de conexión.');
+
+        } catch (err) {
+            alert('Error de red: ' + err.message);
             btn.disabled = false;
             btn.innerHTML = '<i class="bx bx-send me-1"></i>Enviar a Cocina';
-        });
+        }
     });
 </script>
 }

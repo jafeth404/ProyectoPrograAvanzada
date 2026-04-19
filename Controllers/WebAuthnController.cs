@@ -238,6 +238,8 @@ namespace proyectoprogra.Controllers
                 if (appUser == null || !appUser.Activo)
                     return BadRequest(new { error = "Usuario no encontrado o inactivo." });
 
+                appUser.HaIniciadoSesion = true;
+                await _userManager.UpdateAsync(appUser);
                 await _signInManager.SignInAsync(appUser, isPersistent: false);
 
                 return Json(new { status = "ok", redirectUrl = "/" });

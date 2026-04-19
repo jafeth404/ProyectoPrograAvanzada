@@ -107,7 +107,11 @@ namespace proyectoprogra.Controllers
                 Genero = user.Genero,
                 Email = user.Email!,
                 TipoTarjeta = user.TipoTarjeta,
-                Rol = roles.FirstOrDefault() ?? ""
+                Ultimos4Tarjeta = user.Ultimos4Tarjeta,
+                DineroDisponible = user.DineroDisponible,
+                Rol = roles.FirstOrDefault() ?? "",
+                Activo = user.Activo,
+                HaIniciadoSesion = user.HaIniciadoSesion
             };
 
             ViewBag.Roles = _roleManager.Roles.Select(r => r.Name).ToList();
@@ -131,6 +135,8 @@ namespace proyectoprogra.Controllers
             user.NombreCompleto = vm.NombreCompleto;
             user.Genero = vm.Genero;
             user.TipoTarjeta = string.IsNullOrWhiteSpace(vm.TipoTarjeta) ? "N/A" : vm.TipoTarjeta;
+            user.Activo = vm.Activo;
+            user.HaIniciadoSesion = vm.HaIniciadoSesion;
 
             if (!string.IsNullOrWhiteSpace(vm.NumeroTarjeta))
                 user.Ultimos4Tarjeta = ExtraerUltimos4(vm.NumeroTarjeta);
@@ -218,6 +224,32 @@ namespace proyectoprogra.Controllers
             await _userManager.UpdateAsync(user);
             TempData["Exito"] = $"El usuario {user.Email} fue desactivado correctamente.";
             return RedirectToAction("Index");
+        }
+
+        // AJAX: look up a local user by email or identificación
+        [HttpGet]
+        public async Task<IActionResult> BuscarCliente(string termino)
+        {
+            if (string.IsNullOrWhiteSpace(termino))
+                return Json(new { found = false });
+
+            var user = await _userManager.FindByEmailAsync(termino)
+                    ?? _userManager.Users.FirstOrDefault(u => u.Identificacion == termino);
+
+            if (user == null)
+                return Json(new { found = false });
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return Json(new
+            {
+                found           = true,
+                id              = user.Id,
+                nombre          = user.NombreCompleto,
+                email           = user.Email,
+                dineroDisponible = user.DineroDisponible,
+                rol             = string.Join(", ", roles)
+            });
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────

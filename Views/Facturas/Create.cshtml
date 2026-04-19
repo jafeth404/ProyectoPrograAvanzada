@@ -45,40 +45,83 @@
         var creditoEstimado = Math.Min(dineroDisp, totalEstimado);
         var totalConCredito = totalEstimado - creditoEstimado;
 
-        <!-- Hacienda: Taxpayer lookup -->
+        <!-- Cliente: buscar en el sistema local -->
         <div class="card mb-4">
             <div class="card-header d-flex align-items-center gap-2">
-                <h5 class="mb-0">Datos del Cliente (Hacienda)</h5>
-                <span class="badge bg-label-primary ms-1">API Hacienda</span>
+                <h5 class="mb-0">Datos del Cliente</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Cédula / RUC</label>
+                    <div class="col-md-5">
+                        <label class="form-label">Buscar por correo o identificación</label>
                         <div class="input-group">
                             <input type="text" id="cedulaInput" class="form-control"
-                                   placeholder="Ej: 101234567" maxlength="12" />
+                                   placeholder="correo@ejemplo.com o 101234567" />
                             <button class="btn btn-outline-primary" type="button" id="btnBuscarCliente">
                                 <i class="bx bx-search"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="col-md-5">
-                        <label class="form-label">Nombre</label>
+                    <div class="col-md-4">
+                        <label class="form-label">Nombre del cliente</label>
                         <input type="text" id="nombreCliente" class="form-control" readonly
-                               placeholder="Se completará automáticamente" />
+                               placeholder="Se completará al buscar" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Crédito disponible</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₡</span>
+                            <input type="text" id="creditoCliente" class="form-control" readonly value="0.00" />
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label">Correo para envío de factura</label>
+                        <input type="email" id="emailCliente" class="form-control"
+                               placeholder="correo@ejemplo.com" />
+                    </div>
+                    <input type="hidden" id="clienteUserIdVal" />
+                </div>
+                <div id="clienteAlert" class="alert mt-2 d-none"></div>
+                @if ((bool)(ViewBag.IsAdmin ?? false))
+                {
+                    <div id="crearClienteZone" class="mt-2 d-none">
+                        <a href="/Usuarios/Create" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="bx bx-user-plus me-1"></i>Crear usuario nuevo (abre en nueva pestaña)
+                        </a>
+                        <small class="text-muted ms-2">La compra no se perderá al crear el usuario.</small>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Hacienda: Taxpayer lookup -->
+        <div class="card mb-4">
+            <div class="card-header d-flex align-items-center gap-2">
+                <h5 class="mb-0">Verificación Hacienda (opcional)</h5>
+                <span class="badge bg-label-primary ms-1">API Hacienda</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">Cédula / RUC Hacienda</label>
+                        <div class="input-group">
+                            <input type="text" id="cedulaHacienda" class="form-control"
+                                   placeholder="Ej: 101234567" maxlength="12" />
+                            <button class="btn btn-outline-secondary" type="button" id="btnBuscarHacienda">
+                                <i class="bx bx-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nombre (Hacienda)</label>
+                        <input type="text" id="nombreHacienda" class="form-control" readonly />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Estado Tributario</label>
-                        <input type="text" id="estadoCliente" class="form-control" readonly />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Correo del Cliente</label>
-                        <input type="email" id="emailCliente" name="emailCliente"
-                               class="form-control" placeholder="correo@ejemplo.com" />
+                        <input type="text" id="estadoHacienda" class="form-control" readonly />
                     </div>
                 </div>
-                <div id="clienteAlert" class="alert mt-2 d-none"></div>
+                <div id="haciendaAlert" class="alert mt-2 d-none"></div>
             </div>
         </div>
 
@@ -222,6 +265,7 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="pedidoId" value="@Model.PedidoId" />
                     <input type="hidden" name="emailCliente" id="emailClienteHidden" />
+                    <input type="hidden" name="clienteUserId" id="formClienteUserId" />
 
                     <div class="row g-3">
 
@@ -258,12 +302,26 @@
                         }
 
                         <div class="col-md-4">
-                            <label class="form-label">Costo Delivery</label>
+                            <label class="form-label">
+                                Costo Delivery
+                                @{
+                                    var tipoDelivery = (string)(ViewBag.TipoDelivery ?? "Monto");
+                                    var deliveryCfg  = (decimal)(ViewBag.DeliveryConfig ?? 0m);
+                                    var deliveryRaw  = (decimal)(ViewBag.CargoDeliveryRaw ?? 0m);
+                                }
+                                @if (deliveryCfg > 0)
+                                {
+                                    <span class="badge bg-label-info ms-1">
+                                        Config: @(tipoDelivery == "Porcentaje" ? $"{deliveryRaw}%" : $"₡{deliveryCfg:N2}")
+                                    </span>
+                                }
+                            </label>
                             <div class="input-group">
                                 <span class="input-group-text">₡</span>
                                 <input type="number" step="0.01" min="0" name="costoDelivery"
-                                       class="form-control" value="0" />
+                                       class="form-control" value="@deliveryCfg.ToString("F2")" />
                             </div>
+                            <small class="text-muted">Editable si necesita ajustar</small>
                         </div>
 
                         @if (dineroDisp > 0)
@@ -287,9 +345,12 @@
 
                     </div>
 
-                    <div class="mt-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-success">
+                    <div class="mt-4 d-flex gap-2 flex-wrap">
+                        <button type="submit" name="accion" value="facturar" class="btn btn-success">
                             <i class="bx bx-check me-1"></i> Generar Factura
+                        </button>
+                        <button type="submit" name="accion" value="carrito" class="btn btn-warning">
+                            <i class="bx bx-cart me-1"></i> Guardar en Carrito
                         </button>
                         <a asp-action="Index" class="btn btn-secondary">Volver</a>
                     </div>
@@ -302,54 +363,103 @@
 
 @section Scripts {
 <script>
-    // ── Taxpayer lookup ──────────────────────────────────────────────
-    document.getElementById('btnBuscarCliente').addEventListener('click', async () => {
-        const cedula = document.getElementById('cedulaInput').value.trim();
+    // ── Local DB client search ───────────────────────────────────────
+    async function buscarClienteLocal() {
+        const termino = document.getElementById('cedulaInput').value.trim();
         const alertEl = document.getElementById('clienteAlert');
         alertEl.className = 'alert mt-2 d-none';
 
-        if (!cedula) {
-            alertEl.textContent = 'Ingrese una cédula.';
+        if (!termino) {
+            alertEl.textContent = 'Ingrese un correo o número de identificación.';
             alertEl.className = 'alert alert-warning mt-2';
             return;
         }
 
         try {
-            const res = await fetch(`/api/hacienda/contribuyente?id=${encodeURIComponent(cedula)}`);
+            const res  = await fetch(`/Usuarios/BuscarCliente?termino=${encodeURIComponent(termino)}`);
             const data = await res.json();
 
-            if (!res.ok) {
-                alertEl.textContent = data.error ?? 'No encontrado.';
+            if (!data.found) {
+                alertEl.textContent = 'Cliente no encontrado en el sistema.';
                 alertEl.className = 'alert alert-danger mt-2';
                 document.getElementById('nombreCliente').value = '';
-                document.getElementById('estadoCliente').value = '';
+                document.getElementById('creditoCliente').value = '0.00';
+                document.getElementById('emailCliente').value = '';
+                document.getElementById('clienteUserIdVal').value = '';
+                document.getElementById('formClienteUserId').value = '';
+                const zona = document.getElementById('crearClienteZone');
+                if (zona) zona.classList.remove('d-none');
                 return;
             }
 
-            document.getElementById('nombreCliente').value = data.nombre ?? '';
-            document.getElementById('estadoCliente').value = data.estado ?? '—';
+            document.getElementById('nombreCliente').value   = data.nombre ?? '';
+            document.getElementById('emailCliente').value    = data.email  ?? '';
+            document.getElementById('emailClienteHidden').value = data.email ?? '';
+            document.getElementById('creditoCliente').value  = parseFloat(data.dineroDisponible ?? 0).toFixed(2);
+            document.getElementById('clienteUserIdVal').value  = data.id;
+            document.getElementById('formClienteUserId').value = data.id;
 
-            if (data.moroso || data.omiso) {
-                alertEl.textContent = '⚠ Contribuyente con situación irregular (moroso/omiso).';
-                alertEl.className = 'alert alert-warning mt-2';
-            }
+            alertEl.textContent = `Cliente encontrado: ${data.nombre} (${data.rol})`;
+            alertEl.className   = 'alert alert-success mt-2';
+
+            const zona = document.getElementById('crearClienteZone');
+            if (zona) zona.classList.add('d-none');
         } catch {
-            alertEl.textContent = 'Error de conexión con la API de Hacienda.';
-            alertEl.className = 'alert alert-danger mt-2';
+            alertEl.textContent = 'Error de conexión al buscar el cliente.';
+            alertEl.className   = 'alert alert-danger mt-2';
         }
-    });
+    }
 
-    // Allow Enter key in cedula field
+    document.getElementById('btnBuscarCliente').addEventListener('click', buscarClienteLocal);
     document.getElementById('cedulaInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            document.getElementById('btnBuscarCliente').click();
-        }
+        if (e.key === 'Enter') { e.preventDefault(); buscarClienteLocal(); }
     });
 
     // ── Sync email field into hidden POST input ──────────────────────
     document.getElementById('emailCliente').addEventListener('input', e => {
         document.getElementById('emailClienteHidden').value = e.target.value;
+    });
+
+    // ── Hacienda taxpayer lookup ─────────────────────────────────────
+    async function buscarHacienda() {
+        const cedula  = document.getElementById('cedulaHacienda').value.trim();
+        const alertEl = document.getElementById('haciendaAlert');
+        alertEl.className = 'alert mt-2 d-none';
+
+        if (!cedula) {
+            alertEl.textContent = 'Ingrese una cédula o RUC.';
+            alertEl.className   = 'alert alert-warning mt-2';
+            return;
+        }
+
+        try {
+            const res  = await fetch(`/api/hacienda/contribuyente?id=${encodeURIComponent(cedula)}`);
+            const data = await res.json();
+
+            if (!res.ok) {
+                alertEl.textContent = data.error ?? 'No encontrado en Hacienda.';
+                alertEl.className   = 'alert alert-danger mt-2';
+                document.getElementById('nombreHacienda').value = '';
+                document.getElementById('estadoHacienda').value = '';
+                return;
+            }
+
+            document.getElementById('nombreHacienda').value = data.nombre ?? '';
+            document.getElementById('estadoHacienda').value = data.estado ?? '—';
+
+            if (data.moroso || data.omiso) {
+                alertEl.textContent = 'Contribuyente con situación irregular (moroso/omiso).';
+                alertEl.className   = 'alert alert-warning mt-2';
+            }
+        } catch {
+            alertEl.textContent = 'Error de conexión con la API de Hacienda.';
+            alertEl.className   = 'alert alert-danger mt-2';
+        }
+    }
+
+    document.getElementById('btnBuscarHacienda').addEventListener('click', buscarHacienda);
+    document.getElementById('cedulaHacienda').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); buscarHacienda(); }
     });
 
     // ── Exchange rate ────────────────────────────────────────────────

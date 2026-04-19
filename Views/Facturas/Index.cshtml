@@ -1,4 +1,4 @@
-﻿@model IEnumerable<proyectoprogra.Models.Entities.Factura>
+@model IEnumerable<proyectoprogra.Models.Entities.Factura>
 
 @{
     ViewData["Title"] = "Facturas";
@@ -10,6 +10,13 @@
 {
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 }
@@ -25,6 +32,7 @@
             <th>Pedido</th>
             <th>Fecha</th>
             <th>Total</th>
+            <th>Estado</th>
             <th></th>
         </tr>
     </thead>
@@ -34,16 +42,50 @@
         <tr>
             <td>@f.NumeroFactura</td>
             <td>@f.PedidoId</td>
-            <td>@f.Fecha</td>
-            <td>₡@f.Total</td>
+            <td>@f.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+            <td>₡@f.Total.ToString("N2")</td>
             <td>
-                <a asp-action="Details" asp-route-id="@f.FacturaId" class="btn btn-sm btn-info">Details</a>
-                <a asp-action="Edit" asp-route-id="@f.FacturaId" class="btn btn-sm btn-primary">Edit</a>
-                <a asp-action="Delete" asp-route-id="@f.FacturaId" class="btn btn-sm btn-danger">Delete</a>
-                    <a asp-action="Pdf" asp-route-id="@f.FacturaId"
-                           class="btn btn-danger btn-sm">
-                        PDF
-                    </a>
+                @if (f.Estado == "Pendiente")
+                {
+                    <span class="badge bg-label-warning">
+                        <i class="bx bx-cart me-1"></i>En carrito
+                    </span>
+                }
+                else if (f.Estado == "Completada")
+                {
+                    <span class="badge bg-label-success">
+                        <i class="bx bx-check me-1"></i>Completada
+                    </span>
+                }
+                else
+                {
+                    <span class="badge bg-label-danger">Cancelada</span>
+                }
+            </td>
+            <td>
+                <a asp-action="Details" asp-route-id="@f.FacturaId" class="btn btn-sm btn-info">Detalles</a>
+                <a asp-action="Edit" asp-route-id="@f.FacturaId" class="btn btn-sm btn-primary">Editar</a>
+                <a asp-action="Delete" asp-route-id="@f.FacturaId" class="btn btn-sm btn-danger">Eliminar</a>
+                <a asp-action="Pdf" asp-route-id="@f.FacturaId" class="btn btn-danger btn-sm">PDF</a>
+
+                @if (f.Estado == "Pendiente")
+                {
+                    <form asp-action="Completar" asp-route-id="@f.FacturaId"
+                          method="post" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="bx bx-check-circle me-1"></i>Completar
+                        </button>
+                    </form>
+                    <form asp-action="Cancelar" asp-route-id="@f.FacturaId"
+                          method="post" style="display:inline;"
+                          onsubmit="return confirm('¿Cancelar y vaciar este carrito?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bx bx-x-circle me-1"></i>Cancelar
+                        </button>
+                    </form>
+                }
             </td>
         </tr>
     }

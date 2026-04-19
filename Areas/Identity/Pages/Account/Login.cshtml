@@ -14,25 +14,23 @@
                 <h2>Usar cuenta local</h2>
                 <hr />
                 <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                <div class="form-floating mb-3">
+                <div class="mb-3">
+                    <label asp-for="Input.Email" class="form-label">Email</label>
                     <input asp-for="Input.Email" class="form-control"
                            autocomplete="username webauthn" aria-required="true"
                            placeholder="name@example.com" />
-                    <label asp-for="Input.Email" class="form-label">Email</label>
                     <span asp-validation-for="Input.Email" class="text-danger"></span>
                 </div>
-                <div class="form-floating mb-3">
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label">Contraseña</label>
                     <input asp-for="Input.Password" class="form-control"
                            autocomplete="current-password" aria-required="true"
-                           placeholder="password" />
-                    <label asp-for="Input.Password" class="form-label">Contraseña</label>
+                           placeholder="••••••••" />
                     <span asp-validation-for="Input.Password" class="text-danger"></span>
                 </div>
-                <div class="checkbox mb-3">
-                    <label asp-for="Input.RememberMe" class="form-label">
-                        <input class="form-check-input" asp-for="Input.RememberMe" />
-                        @Html.DisplayNameFor(m => m.Input.RememberMe)
-                    </label>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" asp-for="Input.RememberMe" />
+                    <label class="form-check-label" asp-for="Input.RememberMe">¿Recuérdame?</label>
                 </div>
                 <div class="d-grid mb-2">
                     <button id="login-submit" type="submit" class="btn btn-lg btn-primary">
@@ -51,14 +49,14 @@
 
                 <div class="d-grid mb-3">
                     <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl"
-                       class="btn btn-lg btn-outline-primary">
+                       class="btn btn-lg btn-primary">
                         <i class="bx bx-user-plus me-1"></i> Crear cuenta
                     </a>
                 </div>
 
                 <div>
-                    <p><a id="forgot-password" asp-page="./ForgotPassword">¿Olvidaste tu contraseña?</a></p>
-                    <p><a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Reenviar confirmación</a></p>
+                    <p><a id="forgot-password" asp-page="./ForgotPassword" class="login-link">¿Olvidaste tu contraseña?</a></p>
+                    <p><a id="resend-confirmation" asp-page="./ResendEmailConfirmation" class="login-link">Reenviar confirmación</a></p>
                 </div>
             </form>
         </section>

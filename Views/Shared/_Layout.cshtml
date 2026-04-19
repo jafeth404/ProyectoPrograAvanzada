@@ -58,13 +58,16 @@
                         <span class="menu-header-text">Gestión</span>
                     </li>
 
-                    <!-- Dashboard -->
-                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
-                        <a asp-controller="Home" asp-action="Index" class="menu-link">
-                            <i class="menu-icon bx bx-home-alt"></i>
-                            <div>Dashboard</div>
-                        </a>
-                    </li>
+                    <!-- Dashboard (hidden for web users) -->
+                    @if (!User.IsInRole("Usuario") || User.IsInRole("Administrador"))
+                    {
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                            <a asp-controller="Home" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-home-alt"></i>
+                                <div>Dashboard</div>
+                            </a>
+                        </li>
+                    }
 
                     <!-- ADMIN -->
                     @if (User.IsInRole("Administrador"))
@@ -75,6 +78,12 @@
                                 <a asp-controller="Usuarios" asp-action="Index" class="menu-link">
                                     <i class="menu-icon bx bx-user"></i>
                                     <div>Usuarios</div>
+                                </a>
+                            </li>
+                            <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Configuracion" ? "active" : "")">
+                                <a asp-controller="Configuracion" asp-action="Index" class="menu-link">
+                                    <i class="menu-icon bx bx-cog"></i>
+                                    <div>Configuración</div>
                                 </a>
                             </li>
                         }

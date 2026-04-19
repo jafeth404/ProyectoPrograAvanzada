@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using System.Net;
 using System.Net.Mail;
 
@@ -19,6 +19,14 @@ public class EmailSender : IEmailSender
     }
 
     public async Task SendEmailAsync(string email, string subject, string htmlMessage)
+        => await SendCoreAsync(email, subject, htmlMessage, null, null);
+
+    public async Task SendEmailWithPdfAsync(string email, string subject, string htmlMessage,
+                                            byte[] pdfBytes, string pdfFileName)
+        => await SendCoreAsync(email, subject, htmlMessage, pdfBytes, pdfFileName);
+
+    private async Task SendCoreAsync(string email, string subject, string htmlMessage,
+                                     byte[]? pdfBytes, string? pdfFileName)
     {
         var smtp = new SmtpClient(_smtpServer, _port)
         {
@@ -35,6 +43,13 @@ public class EmailSender : IEmailSender
         };
 
         message.To.Add(email);
+
+        if (pdfBytes != null && !string.IsNullOrWhiteSpace(pdfFileName))
+        {
+            var ms         = new MemoryStream(pdfBytes);
+            var attachment = new Attachment(ms, pdfFileName, "application/pdf");
+            message.Attachments.Add(attachment);
+        }
 
         await smtp.SendMailAsync(message);
     }

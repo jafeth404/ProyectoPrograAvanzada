@@ -15,6 +15,9 @@ public partial class Pedido
 
     public string? Estado { get; set; }
 
+    /// <summary>Set when a web Usuario creates the order so they can only see their own.</summary>
+    public string? UsuarioId { get; set; }
+
     public virtual ICollection<Factura> Facturas { get; set; } = new List<Factura>();
 
     public virtual Mesa? Mesa { get; set; }

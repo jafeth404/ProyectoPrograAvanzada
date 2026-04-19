@@ -1,5 +1,5 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -12,33 +12,34 @@ using System.Security.Claims;
 public class FacturasController : Controller
 {
     private readonly ApplicationDbContext _context;
-    private readonly FacturaPdfService _pdfService;
-    private readonly IEmailSender _emailSender;
+    private readonly FacturaPdfService    _pdfService;
+    private readonly EmailSender          _emailSender;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public FacturasController(
         ApplicationDbContext context,
         FacturaPdfService pdfService,
-        IEmailSender emailSender,
+        EmailSender emailSender,
         UserManager<ApplicationUser> userManager)
     {
-        _context    = context;
-        _pdfService = pdfService;
+        _context     = context;
+        _pdfService  = pdfService;
         _emailSender = emailSender;
         _userManager = userManager;
     }
 
-    // 🔥 INDEX
+    // INDEX
     public async Task<IActionResult> Index()
     {
         var facturas = await _context.Facturas
             .Include(f => f.Pedido)
+            .OrderByDescending(f => f.Fecha)
             .ToListAsync();
 
         return View(facturas);
     }
 
-    // 🔥 DETAILS
+    // DETAILS
     public async Task<IActionResult> Details(int id)
     {
         var factura = await _context.Facturas
@@ -47,68 +48,61 @@ public class FacturasController : Controller
             .ThenInclude(fd => fd.Producto)
             .FirstOrDefaultAsync(f => f.FacturaId == id);
 
-        if (factura == null)
-            return NotFound();
-
+        if (factura == null) return NotFound();
         return View(factura);
     }
 
-    // 🔥 CREATE (GET)
+    // CREATE GET
     public async Task<IActionResult> Create(int? pedidoId)
     {
         ViewBag.Pedidos = new SelectList(
-            await _context.Pedidos.ToListAsync(),
-            "PedidoId",
-            "PedidoId",
-            pedidoId
-        );
+            await _context.Pedidos.ToListAsync(), "PedidoId", "PedidoId", pedidoId);
 
-        if (pedidoId == null)
-            return View(null);
+        if (pedidoId == null) return View(null);
 
         var pedido = await _context.Pedidos
-            .Include(p => p.PedidoDetalles)
-            .ThenInclude(d => d.Producto)
+            .Include(p => p.PedidoDetalles).ThenInclude(d => d.Producto)
             .FirstOrDefaultAsync(p => p.PedidoId == pedidoId);
 
-        if (pedido == null)
-            return NotFound();
+        if (pedido == null) return NotFound();
 
-        // Pre-calculate auto values so the view can display them
         decimal subtotal = pedido.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
         bool esMesa = pedido.MesaId.HasValue;
 
-        ViewBag.EsMesa = esMesa;
-        ViewBag.PropinaAuto = esMesa ? Math.Round(subtotal * 0.10m, 2) : 0m;
+        // Load configured delivery charge
+        var config = await _context.ConfiguracionSistema.FirstOrDefaultAsync()
+                     ?? new ConfiguracionSistema();
+        decimal deliveryConfig = config.TipoCargoDelivery == "Porcentaje"
+            ? Math.Round(subtotal * config.CargoDelivery / 100, 2)
+            : config.CargoDelivery;
+
+        ViewBag.EsMesa           = esMesa;
+        ViewBag.PropinaAuto      = esMesa ? Math.Round(subtotal * 0.10m, 2) : 0m;
         ViewBag.CostoEmpaqueAuto = !esMesa
             ? pedido.PedidoDetalles
                 .Where(d => d.Producto!.RequiereEmpaque)
                 .Sum(d => (d.Producto!.CostoEmpaque ?? 0) * d.Cantidad)
             : 0m;
-
-        // Current user's available credit
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId != null)
-        {
-            var usuario = await _userManager.FindByIdAsync(userId);
-            ViewBag.DineroDisponible = usuario?.DineroDisponible ?? 0m;
-        }
-        else
-        {
-            ViewBag.DineroDisponible = 0m;
-        }
+        ViewBag.DeliveryConfig = deliveryConfig;
+        ViewBag.TipoDelivery   = config.TipoCargoDelivery;
+        ViewBag.CargoDeliveryRaw = config.CargoDelivery;
+        ViewBag.IsAdmin        = User.IsInRole("Administrador");
 
         return View(pedido);
     }
 
-    // 🔥 CREATE (POST)
+    // CREATE POST — guarda como Pendiente (carrito) o Completada según botón
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(int pedidoId, decimal? costoDelivery, string? emailCliente)
+    public async Task<IActionResult> Create(
+        int pedidoId,
+        decimal? costoDelivery,
+        string? emailCliente,
+        string? clienteUserId,
+        string accion) // "carrito" or "facturar"
     {
         var pedido = await _context.Pedidos
-            .Include(p => p.PedidoDetalles)
-            .ThenInclude(d => d.Producto)
+            .Include(p => p.PedidoDetalles).ThenInclude(d => d.Producto)
             .FirstOrDefaultAsync(p => p.PedidoId == pedidoId);
 
         if (pedido == null)
@@ -120,80 +114,73 @@ public class FacturasController : Controller
 
         if (!pedido.PedidoDetalles.Any())
         {
-            ViewBag.Pedidos = new SelectList(await _context.Pedidos.ToListAsync(), "PedidoId", "PedidoId", pedidoId);
             ModelState.AddModelError("", "El pedido no tiene productos.");
             return View(pedido);
         }
 
-        var yaExiste = await _context.Facturas.AnyAsync(f => f.PedidoId == pedidoId);
-        if (yaExiste)
+        if (await _context.Facturas.AnyAsync(f => f.PedidoId == pedidoId && f.Estado != "Cancelada"))
         {
-            ViewBag.Pedidos = new SelectList(await _context.Pedidos.ToListAsync(), "PedidoId", "PedidoId", pedidoId);
-            ModelState.AddModelError("", "Ese pedido ya tiene una factura.");
+            ModelState.AddModelError("", "Ese pedido ya tiene una factura activa.");
             return View(pedido);
         }
 
-        // ── Stock validation ──────────────────────────────────────────────────
-        foreach (var detalle in pedido.PedidoDetalles)
+        bool finalizar = accion == "facturar";
+
+        // Stock validation only when finalizing
+        if (finalizar)
         {
-            if (detalle.Producto == null) continue;
-            if (detalle.Producto.Stock < detalle.Cantidad)
+            foreach (var det in pedido.PedidoDetalles)
             {
-                ViewBag.Pedidos = new SelectList(await _context.Pedidos.ToListAsync(), "PedidoId", "PedidoId", pedidoId);
-                ModelState.AddModelError("",
-                    $"Stock insuficiente para \"{detalle.Producto.Nombre}\". " +
-                    $"Disponible: {detalle.Producto.Stock}, Requerido: {detalle.Cantidad}.");
-                return View(pedido);
+                if (det.Producto == null) continue;
+                if (det.Producto.Stock < det.Cantidad)
+                {
+                    ModelState.AddModelError("",
+                        $"Stock insuficiente para \"{det.Producto.Nombre}\". " +
+                        $"Disponible: {det.Producto.Stock}, Requerido: {det.Cantidad}.");
+                    return View(pedido);
+                }
             }
         }
 
-        // ── Auto-calculate totals ─────────────────────────────────────────────
         decimal subtotal = pedido.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
         decimal iva      = subtotal * 0.13m;
         bool esMesa      = pedido.MesaId.HasValue;
-
-        // 10% auto-tip for dine-in orders
-        decimal propina = esMesa ? Math.Round(subtotal * 0.10m, 2) : 0m;
-
-        // Packaging cost for takeout: sum per-product CostoEmpaque × Cantidad
-        decimal empaque = !esMesa
+        decimal propina  = esMesa ? Math.Round(subtotal * 0.10m, 2) : 0m;
+        decimal empaque  = !esMesa
             ? pedido.PedidoDetalles
                 .Where(d => d.Producto!.RequiereEmpaque)
                 .Sum(d => (d.Producto!.CostoEmpaque ?? 0) * d.Cantidad)
             : 0m;
-
         decimal delivery = costoDelivery ?? 0m;
         decimal total    = subtotal + iva + propina + empaque + delivery;
 
-        // ── Current user ──────────────────────────────────────────────────────
-        var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        ApplicationUser? usuario = userId != null
-            ? await _userManager.FindByIdAsync(userId)
-            : null;
+        // Resolve client user (not the logged-in cashier)
+        ApplicationUser? cliente = string.IsNullOrWhiteSpace(clienteUserId)
+            ? null
+            : await _userManager.FindByIdAsync(clienteUserId);
 
-        // ── Apply DineroDisponible credit ─────────────────────────────────────
         decimal creditoAplicado = 0m;
-        if (usuario != null && usuario.DineroDisponible > 0)
+        if (finalizar && cliente != null && cliente.DineroDisponible > 0)
         {
-            creditoAplicado            = Math.Min(usuario.DineroDisponible, total);
-            total                     -= creditoAplicado;
-            usuario.DineroDisponible  -= creditoAplicado;
+            creditoAplicado          = Math.Min(cliente.DineroDisponible, total);
+            total                   -= creditoAplicado;
+            cliente.DineroDisponible -= creditoAplicado;
         }
 
-        // ── Persist factura ───────────────────────────────────────────────────
         var factura = new Factura
         {
-            NumeroFactura  = $"FAC-{DateTime.Now:yyyyMMddHHmmss}",
-            PedidoId       = pedidoId,
-            Fecha          = DateTime.Now,
-            Subtotal       = subtotal,
-            Iva            = iva,
-            Propina        = propina,
-            CostoEmpaque   = empaque,
-            CostoDelivery  = delivery,
+            NumeroFactura   = $"FAC-{DateTime.Now:yyyyMMddHHmmss}",
+            PedidoId        = pedidoId,
+            Fecha           = DateTime.Now,
+            Subtotal        = subtotal,
+            Iva             = iva,
+            Propina         = propina,
+            CostoEmpaque    = empaque,
+            CostoDelivery   = delivery,
             CreditoAplicado = creditoAplicado,
-            Total          = total,
-            UsuarioId      = userId
+            Total           = total,
+            UsuarioId       = cliente?.Id,
+            Estado          = finalizar ? "Completada" : "Pendiente"
         };
 
         _context.Facturas.Add(factura);
@@ -211,43 +198,134 @@ public class FacturasController : Controller
             });
         }
 
-        // ── Deduct stock ──────────────────────────────────────────────────────
-        foreach (var detalle in pedido.PedidoDetalles)
+        if (finalizar)
         {
-            if (detalle.Producto == null) continue;
-            detalle.Producto.Stock -= detalle.Cantidad;
-        }
+            foreach (var det in pedido.PedidoDetalles)
+                if (det.Producto != null) det.Producto.Stock -= det.Cantidad;
 
-        // ── Persist credit change on user ─────────────────────────────────────
-        if (usuario != null && creditoAplicado > 0)
-            await _userManager.UpdateAsync(usuario);
+            if (cliente != null && creditoAplicado > 0)
+                await _userManager.UpdateAsync(cliente);
+        }
 
         await _context.SaveChangesAsync();
 
-        // ── Email ─────────────────────────────────────────────────────────────
-        if (!string.IsNullOrWhiteSpace(emailCliente))
+        if (finalizar && !string.IsNullOrWhiteSpace(emailCliente))
         {
+            var pdf  = _pdfService.Generate(factura);
             var html = BuildFacturaEmail(factura, emailCliente.Trim());
-            await _emailSender.SendEmailAsync(
+            await _emailSender.SendEmailWithPdfAsync(
                 emailCliente.Trim(),
-                $"Ha recibido una Factura Electrónica – {factura.NumeroFactura}",
-                html);
+                $"Factura – {factura.NumeroFactura}",
+                html,
+                pdf,
+                $"{factura.NumeroFactura}.pdf");
         }
 
-        TempData["Success"] = $"Factura {factura.NumeroFactura} creada correctamente." +
-            (creditoAplicado > 0 ? $" Se aplicó ₡{creditoAplicado:N2} de crédito." : "");
+        TempData["Success"] = finalizar
+            ? $"Factura {factura.NumeroFactura} generada." + (creditoAplicado > 0 ? $" Crédito aplicado: ₡{creditoAplicado:N2}." : "")
+            : $"Compra guardada en carrito como {factura.NumeroFactura}. Puede completarla o cancelarla desde el listado.";
+
         return RedirectToAction(nameof(Index));
     }
 
-    // 🔥 EDIT
-    public async Task<IActionResult> Edit(int id)
+    // COMPLETAR carrito
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Completar(int id)
     {
         var factura = await _context.Facturas
+            .Include(f => f.FacturaDetalles).ThenInclude(fd => fd.Producto)
             .FirstOrDefaultAsync(f => f.FacturaId == id);
 
-        if (factura == null)
-            return NotFound();
+        if (factura == null) return NotFound();
+        if (factura.Estado != "Pendiente")
+        {
+            TempData["Error"] = "Esta factura no está en estado Pendiente.";
+            return RedirectToAction(nameof(Index));
+        }
 
+        // Stock check
+        foreach (var fd in factura.FacturaDetalles)
+        {
+            if (fd.Producto == null) continue;
+            if (fd.Producto.Stock < fd.Cantidad)
+            {
+                TempData["Error"] = $"Stock insuficiente para \"{fd.Producto.Nombre}\".";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        // Apply DineroDisponible
+        decimal creditoExtra = 0m;
+        if (!string.IsNullOrEmpty(factura.UsuarioId))
+        {
+            var cliente = await _userManager.FindByIdAsync(factura.UsuarioId);
+            if (cliente != null && cliente.DineroDisponible > 0)
+            {
+                creditoExtra              = Math.Min(cliente.DineroDisponible, factura.Total);
+                factura.Total            -= creditoExtra;
+                factura.CreditoAplicado  += creditoExtra;
+                cliente.DineroDisponible -= creditoExtra;
+                await _userManager.UpdateAsync(cliente);
+            }
+        }
+
+        // Deduct stock
+        foreach (var fd in factura.FacturaDetalles)
+            if (fd.Producto != null) fd.Producto.Stock -= fd.Cantidad;
+
+        factura.Estado = "Completada";
+        await _context.SaveChangesAsync();
+
+        // Send email with PDF
+        if (!string.IsNullOrEmpty(factura.UsuarioId))
+        {
+            var cliente = await _userManager.FindByIdAsync(factura.UsuarioId);
+            if (cliente?.Email != null)
+            {
+                var pdf  = _pdfService.Generate(factura);
+                var html = BuildFacturaEmail(factura, cliente.Email);
+                await _emailSender.SendEmailWithPdfAsync(
+                    cliente.Email,
+                    $"Factura – {factura.NumeroFactura}",
+                    html, pdf,
+                    $"{factura.NumeroFactura}.pdf");
+            }
+        }
+
+        TempData["Success"] = $"Factura {factura.NumeroFactura} completada.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    // CANCELAR carrito
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancelar(int id)
+    {
+        var factura = await _context.Facturas
+            .Include(f => f.FacturaDetalles)
+            .FirstOrDefaultAsync(f => f.FacturaId == id);
+
+        if (factura == null) return NotFound();
+        if (factura.Estado != "Pendiente")
+        {
+            TempData["Error"] = "Solo se pueden cancelar facturas en estado Pendiente.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        _context.FacturaDetalles.RemoveRange(factura.FacturaDetalles);
+        _context.Facturas.Remove(factura);
+        await _context.SaveChangesAsync();
+
+        TempData["Success"] = "Carrito cancelado y vaciado.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    // EDIT
+    public async Task<IActionResult> Edit(int id)
+    {
+        var factura = await _context.Facturas.FirstOrDefaultAsync(f => f.FacturaId == id);
+        if (factura == null) return NotFound();
         return View(factura);
     }
 
@@ -255,12 +333,10 @@ public class FacturasController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, [Bind("FacturaId,Propina,CostoEmpaque,CostoDelivery")] Factura factura)
     {
-        if (id != factura.FacturaId)
-            return NotFound();
+        if (id != factura.FacturaId) return NotFound();
 
         var facturaDb = await _context.Facturas.FirstOrDefaultAsync(f => f.FacturaId == id);
-        if (facturaDb == null)
-            return NotFound();
+        if (facturaDb == null) return NotFound();
 
         facturaDb.Propina       = factura.Propina ?? 0;
         facturaDb.CostoEmpaque  = factura.CostoEmpaque ?? 0;
@@ -275,16 +351,14 @@ public class FacturasController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // 🔥 DELETE
+    // DELETE
     public async Task<IActionResult> Delete(int id)
     {
         var factura = await _context.Facturas
             .Include(f => f.Pedido)
             .FirstOrDefaultAsync(f => f.FacturaId == id);
 
-        if (factura == null)
-            return NotFound();
-
+        if (factura == null) return NotFound();
         return View(factura);
     }
 
@@ -306,99 +380,69 @@ public class FacturasController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // ── EMAIL ────────────────────────────────────────────────────────────────
+    // PDF download
+    public async Task<IActionResult> Pdf(int id)
+    {
+        var factura = await _context.Facturas
+            .Include(f => f.Pedido)
+            .Include(f => f.FacturaDetalles).ThenInclude(fd => fd.Producto)
+            .FirstOrDefaultAsync(f => f.FacturaId == id);
+
+        if (factura == null) return NotFound();
+
+        var pdf = _pdfService.Generate(factura);
+        return File(pdf, "application/pdf", $"{factura.NumeroFactura}.pdf");
+    }
+
+    // ── Email helper ─────────────────────────────────────────────────────────
     private static string BuildFacturaEmail(Factura factura, string emailCliente)
     {
-        var nombre = emailCliente;
-        var fecha  = factura.Fecha.ToString("dd-MM-yyyy");
-        var total  = factura.Total.ToString("N2");
+        var fecha = factura.Fecha.ToString("dd-MM-yyyy HH:mm");
+        var total = factura.Total.ToString("N2");
 
         return $"""
             <!DOCTYPE html>
             <html lang="es">
-            <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+            <head><meta charset="utf-8"></head>
             <body style="margin:0;padding:0;background:#000000;font-family:Arial,sans-serif;">
               <table width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:30px 0;">
                 <tr><td align="center">
-                  <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);">
-
-                    <!-- HEADER -->
+                  <table width="580" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
                     <tr>
                       <td style="background:#013f22;padding:36px 40px;text-align:center;">
-                        <div style="display:inline-block;background:#69ff93;border-radius:50%;width:72px;height:72px;line-height:72px;margin-bottom:16px;">
-                          <span style="font-size:36px;">🧾</span>
-                        </div>
-                        <h1 style="color:#ffffff;font-size:20px;margin:0;line-height:1.4;">
-                          Ha recibido una factura<br>o documento tributario<br>electrónico
-                        </h1>
-                        <p style="color:#69ff93;font-size:22px;margin:12px 0 0;letter-spacing:4px;">»»»</p>
+                        <h1 style="color:#ffffff;font-size:20px;margin:0;">Factura {factura.NumeroFactura}</h1>
+                        <p style="color:#69ff93;margin:8px 0 0;font-size:14px;">RestauranteApp</p>
                       </td>
                     </tr>
-
-                    <!-- BODY -->
                     <tr>
-                      <td style="background:#ffffff;padding:36px 40px;">
-                        <p style="margin:0 0 20px;font-size:15px;color:#000000;">
-                          <strong>Estimado(a):</strong> {nombre}
-                        </p>
-                        <p style="margin:0 0 24px;font-size:15px;color:#013f22;">
-                          Adjunto encontrará el Documento Tributario Electrónico:
-                        </p>
-
-                        <table width="100%" cellpadding="8" cellspacing="0" style="font-size:14px;color:#000000;border-top:2px solid #69ff93;">
-                          <tr style="border-bottom:1px solid #e6e6e6;">
-                            <td style="width:140px;color:#04a56a;padding:10px 0;"><strong>Emitido por:</strong></td>
-                            <td style="padding:10px 0;">RESTAURANTE S.A.</td>
-                          </tr>
-                          <tr style="border-bottom:1px solid #e6e6e6;">
-                            <td style="color:#04a56a;padding:10px 0;"><strong>Tipo:</strong></td>
-                            <td style="padding:10px 0;">Factura Electrónica</td>
-                          </tr>
-                          <tr style="border-bottom:1px solid #e6e6e6;">
-                            <td style="color:#04a56a;padding:10px 0;"><strong>Identificador:</strong></td>
-                            <td style="padding:10px 0;word-break:break-all;">{factura.NumeroFactura}</td>
-                          </tr>
-                          <tr style="border-bottom:1px solid #e6e6e6;">
-                            <td style="color:#04a56a;padding:10px 0;"><strong>Fecha:</strong></td>
-                            <td style="padding:10px 0;">{fecha}</td>
-                          </tr>
-                          <tr>
-                            <td style="color:#04a56a;padding:10px 0;"><strong>Total:</strong></td>
-                            <td style="padding:10px 0;font-size:16px;font-weight:bold;color:#013f22;">₡{total}</td>
+                      <td style="padding:36px 40px;">
+                        <p style="margin:0 0 16px;font-size:15px;">Estimado(a): <strong>{emailCliente}</strong></p>
+                        <table width="100%" cellpadding="8" cellspacing="0" style="font-size:14px;border-top:2px solid #69ff93;">
+                          <tr><td style="color:#04a56a;"><strong>Fecha:</strong></td><td>{fecha}</td></tr>
+                          <tr><td style="color:#04a56a;"><strong>Subtotal:</strong></td><td>₡{factura.Subtotal:N2}</td></tr>
+                          <tr><td style="color:#04a56a;"><strong>IVA (13%):</strong></td><td>₡{factura.Iva:N2}</td></tr>
+                          {(factura.Propina > 0 ? $"<tr><td style='color:#04a56a;'><strong>Propina (10%):</strong></td><td>₡{factura.Propina:N2}</td></tr>" : "")}
+                          {(factura.CostoEmpaque > 0 ? $"<tr><td style='color:#04a56a;'><strong>Empaque:</strong></td><td>₡{factura.CostoEmpaque:N2}</td></tr>" : "")}
+                          {(factura.CostoDelivery > 0 ? $"<tr><td style='color:#04a56a;'><strong>Delivery:</strong></td><td>₡{factura.CostoDelivery:N2}</td></tr>" : "")}
+                          {(factura.CreditoAplicado > 0 ? $"<tr><td style='color:#04a56a;'><strong>Crédito aplicado:</strong></td><td>− ₡{factura.CreditoAplicado:N2}</td></tr>" : "")}
+                          <tr style="border-top:2px solid #013f22;">
+                            <td style="color:#013f22;font-size:16px;"><strong>TOTAL:</strong></td>
+                            <td style="color:#013f22;font-size:16px;font-weight:bold;">₡{total}</td>
                           </tr>
                         </table>
+                        <p style="margin:24px 0 0;font-size:13px;color:#666;">El PDF de su factura se adjunta a este correo.</p>
                       </td>
                     </tr>
-
-                    <!-- FOOTER -->
                     <tr>
-                      <td style="background:#000000;padding:24px 40px;text-align:center;">
-                        <p style="margin:0 0 8px;font-size:14px;color:#69ff93;">Para nosotros es un placer servirle</p>
-                        <p style="margin:0;font-size:12px;color:#e6e6e6;">Documento tributario electrónico generado por RestauranteApp</p>
+                      <td style="background:#000000;padding:20px 40px;text-align:center;">
+                        <p style="margin:0;font-size:12px;color:#e6e6e6;">RestauranteApp — Gracias por su preferencia</p>
                       </td>
                     </tr>
-
                   </table>
                 </td></tr>
               </table>
             </body>
             </html>
             """;
-    }
-
-    // 🔥🔥🔥 PDF
-    public async Task<IActionResult> Pdf(int id)
-    {
-        var factura = await _context.Facturas
-            .Include(f => f.Pedido)
-            .Include(f => f.FacturaDetalles)
-                .ThenInclude(fd => fd.Producto)
-            .FirstOrDefaultAsync(f => f.FacturaId == id);
-
-        if (factura == null)
-            return NotFound();
-
-        var pdf = _pdfService.Generate(factura);
-        return File(pdf, "application/pdf", $"{factura.NumeroFactura}.pdf");
     }
 }

@@ -16,13 +16,13 @@ namespace proyectoprogra.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly FacturaPdfService    _pdfService;
-        private readonly IEmailSender         _emailSender;
+        private readonly EmailSender          _emailSender;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public CajeroController(
             ApplicationDbContext context,
             FacturaPdfService    pdfService,
-            IEmailSender         emailSender,
+            EmailSender          emailSender,
             UserManager<ApplicationUser> userManager)
         {
             _context     = context;
@@ -54,18 +54,17 @@ namespace proyectoprogra.Controllers
         }
 
         // GET: Cajero/Cobrar/5
-        // Preview screen with pre-calculated totals and email input
         public async Task<IActionResult> Cobrar(int id)
         {
             var pedido = await _context.Pedidos
                 .Include(p => p.Mesa)
-                .Include(p => p.PedidoDetalles)
-                    .ThenInclude(d => d.Producto)
+                .Include(p => p.PedidoDetalles).ThenInclude(d => d.Producto)
                 .FirstOrDefaultAsync(p => p.PedidoId == id);
 
             if (pedido == null) return NotFound();
 
-            var yaFacturado = await _context.Facturas.AnyAsync(f => f.PedidoId == id);
+            var yaFacturado = await _context.Facturas
+                .AnyAsync(f => f.PedidoId == id && f.Estado != "Cancelada");
             if (yaFacturado)
             {
                 TempData["Error"] = "Este pedido ya fue facturado.";
@@ -75,15 +74,25 @@ namespace proyectoprogra.Controllers
             decimal subtotal = pedido.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
             bool esDineIn = pedido.MesaId.HasValue;
 
-            ViewBag.Subtotal = subtotal;
-            ViewBag.Iva = Math.Round(subtotal * 0.13m, 2);
-            ViewBag.Propina = esDineIn ? Math.Round(subtotal * 0.10m, 2) : 0m;
-            ViewBag.Empaque = !esDineIn
+            var config = await _context.ConfiguracionSistema.FirstOrDefaultAsync()
+                         ?? new ConfiguracionSistema();
+            decimal deliveryConfig = config.TipoCargoDelivery == "Porcentaje"
+                ? Math.Round(subtotal * config.CargoDelivery / 100, 2)
+                : config.CargoDelivery;
+
+            ViewBag.Subtotal        = subtotal;
+            ViewBag.Iva             = Math.Round(subtotal * 0.13m, 2);
+            ViewBag.Propina         = esDineIn ? Math.Round(subtotal * 0.10m, 2) : 0m;
+            ViewBag.Empaque         = !esDineIn
                 ? pedido.PedidoDetalles
                     .Where(d => d.Producto!.RequiereEmpaque)
                     .Sum(d => (d.Producto!.CostoEmpaque ?? 0) * d.Cantidad)
                 : 0m;
-            ViewBag.EsDineIn = esDineIn;
+            ViewBag.EsDineIn        = esDineIn;
+            ViewBag.DeliveryConfig  = deliveryConfig;
+            ViewBag.TipoDelivery    = config.TipoCargoDelivery;
+            ViewBag.CargoDeliveryRaw = config.CargoDelivery;
+            ViewBag.IsAdmin         = User.IsInRole("Administrador");
 
             return View(pedido);
         }
@@ -91,7 +100,7 @@ namespace proyectoprogra.Controllers
         // POST: Cajero/ProcesarCobro
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ProcesarCobro(int pedidoId, decimal? costoDelivery, string? emailCliente)
+        public async Task<IActionResult> ProcesarCobro(int pedidoId, decimal? costoDelivery, string? emailCliente, string? clienteUserId, string accion = "facturar")
         {
             var pedido = await _context.Pedidos
                 .Include(p => p.PedidoDetalles)
@@ -125,18 +134,19 @@ namespace proyectoprogra.Controllers
             decimal delivery = costoDelivery ?? 0m;
             decimal total    = subtotal + iva + propina + empaque + delivery;
 
-            // Apply DineroDisponible credit
-            var userId  = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            ApplicationUser? usuario = userId != null
-                ? await _userManager.FindByIdAsync(userId)
-                : null;
+            bool finalizar = accion == "facturar";
+
+            // Resolve CLIENT user (not the logged-in cashier)
+            ApplicationUser? cliente = string.IsNullOrWhiteSpace(clienteUserId)
+                ? null
+                : await _userManager.FindByIdAsync(clienteUserId);
 
             decimal creditoAplicado = 0m;
-            if (usuario != null && usuario.DineroDisponible > 0)
+            if (finalizar && cliente != null && cliente.DineroDisponible > 0)
             {
-                creditoAplicado           = Math.Min(usuario.DineroDisponible, total);
-                total                    -= creditoAplicado;
-                usuario.DineroDisponible -= creditoAplicado;
+                creditoAplicado          = Math.Min(cliente.DineroDisponible, total);
+                total                   -= creditoAplicado;
+                cliente.DineroDisponible -= creditoAplicado;
             }
 
             // Persist factura
@@ -152,7 +162,8 @@ namespace proyectoprogra.Controllers
                 CostoDelivery   = delivery,
                 CreditoAplicado = creditoAplicado,
                 Total           = total,
-                UsuarioId       = userId
+                UsuarioId       = cliente?.Id,
+                Estado          = finalizar ? "Completada" : "Pendiente"
             };
 
             _context.Facturas.Add(factura);
@@ -170,26 +181,27 @@ namespace proyectoprogra.Controllers
                 });
             }
 
-            // Deduct stock
-            foreach (var detalle in pedido.PedidoDetalles)
+            if (finalizar)
             {
-                if (detalle.Producto != null)
-                    detalle.Producto.Stock -= detalle.Cantidad;
-            }
+                // Deduct stock
+                foreach (var detalle in pedido.PedidoDetalles)
+                    if (detalle.Producto != null) detalle.Producto.Stock -= detalle.Cantidad;
 
-            if (usuario != null && creditoAplicado > 0)
-                await _userManager.UpdateAsync(usuario);
+                if (cliente != null && creditoAplicado > 0)
+                    await _userManager.UpdateAsync(cliente);
+            }
 
             await _context.SaveChangesAsync();
 
-            // Send email if provided
-            if (!string.IsNullOrWhiteSpace(emailCliente))
+            // Send email with PDF if finalizing
+            if (finalizar && !string.IsNullOrWhiteSpace(emailCliente))
             {
+                var pdf  = _pdfService.Generate(factura);
                 var html = BuildFacturaEmail(factura, emailCliente.Trim());
-                await _emailSender.SendEmailAsync(
+                await _emailSender.SendEmailWithPdfAsync(
                     emailCliente.Trim(),
                     $"Factura – {factura.NumeroFactura}",
-                    html);
+                    html, pdf, $"{factura.NumeroFactura}.pdf");
             }
 
             TempData["FacturaId"]     = factura.FacturaId;
@@ -244,11 +256,12 @@ namespace proyectoprogra.Controllers
             if (factura == null)
                 return NotFound(new { success = false, message = "Factura no encontrada." });
 
+            var pdf  = _pdfService.Generate(factura);
             var html = BuildFacturaEmail(factura, request.Email);
-            await _emailSender.SendEmailAsync(
+            await _emailSender.SendEmailWithPdfAsync(
                 request.Email,
                 $"Factura – {factura.NumeroFactura}",
-                html);
+                html, pdf, $"{factura.NumeroFactura}.pdf");
 
             return Ok(new { success = true });
         }

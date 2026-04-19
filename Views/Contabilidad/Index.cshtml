@@ -163,82 +163,52 @@ else
     </div>
 }
 
-<!-- Confirmation Modal -->
-<div class="modal fade" id="reversarModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bx bx-undo me-2 text-warning"></i>Confirmar Reversión</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>¿Está seguro de que desea reversar la factura <strong id="reversarNumero"></strong>?</p>
-                <p class="text-muted small">
-                    El monto total se acreditará al cliente. Esta acción no se puede deshacer.
-                </p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button class="btn btn-warning" id="btnConfirmarReversar">
-                    <i class="bx bx-undo me-1"></i>Sí, reversar
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+@* Hidden form so JS can reliably read the antiforgery token *@
+<form id="__afTokenForm" style="display:none">@Html.AntiForgeryToken()</form>
 
 @section Scripts {
 <script>
-    const tokenInput = document.createElement('div');
-    tokenInput.innerHTML = '@Html.AntiForgeryToken()';
-    const token = tokenInput.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    const token = document.querySelector('#__afTokenForm input[name="__RequestVerificationToken"]')?.value ?? '';
 
-    let pendingFacturaId = null;
-
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', async function (e) {
         const btn = e.target.closest('.btn-reversar');
         if (!btn) return;
 
-        pendingFacturaId = parseInt(btn.dataset.facturaId);
-        document.getElementById('reversarNumero').textContent = btn.dataset.numero;
+        const facturaId = parseInt(btn.dataset.facturaId);
+        const numero    = btn.dataset.numero;
 
-        const modal = new bootstrap.Modal(document.getElementById('reversarModal'));
-        modal.show();
-    });
+        if (!confirm(`¿Reversar la factura ${numero}?\n\nEl monto se acreditará al cliente. Esta acción no se puede deshacer.`)) {
+            return;
+        }
 
-    document.getElementById('btnConfirmarReversar').addEventListener('click', function () {
-        if (!pendingFacturaId) return;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Reversando…';
 
-        this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Procesando…';
+        try {
+            const r = await fetch('/Contabilidad/Reversar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ facturaId })
+            });
 
-        fetch('/Contabilidad/Reversar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-            body: JSON.stringify({ facturaId: pendingFacturaId })
-        })
-        .then(r => r.json())
-        .then(data => {
-            bootstrap.Modal.getInstance(document.getElementById('reversarModal')).hide();
-            this.disabled = false;
-            this.innerHTML = '<i class="bx bx-undo me-1"></i>Sí, reversar';
+            let data;
+            try { data = await r.json(); }
+            catch { data = { success: false, message: `Error del servidor (${r.status}).` }; }
 
             if (data.success) {
-                // Show toast
                 document.getElementById('toastMsg').textContent = data.message;
-                const t = new bootstrap.Toast(document.getElementById('reversalToast'));
-                t.show();
-                // Reload page after toast
+                new bootstrap.Toast(document.getElementById('reversalToast')).show();
                 setTimeout(() => location.reload(), 2500);
             } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bx bx-undo me-1"></i>Reversar';
                 alert(data.message ?? 'Error al reversar.');
             }
-        })
-        .catch(() => {
-            this.disabled = false;
-            this.innerHTML = '<i class="bx bx-undo me-1"></i>Sí, reversar';
-            alert('Error de conexión.');
-        });
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-undo me-1"></i>Reversar';
+            alert('Error de red: ' + err.message);
+        }
     });
 </script>
 }

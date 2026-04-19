@@ -274,6 +274,26 @@ namespace proyectoprogra.Migrations
                     b.ToTable("Categorias");
                 });
 
+            modelBuilder.Entity("proyectoprogra.Models.Entities.ConfiguracionSistema", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("CargoDelivery")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TipoCargoDelivery")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ConfiguracionSistema");
+                });
+
             modelBuilder.Entity("proyectoprogra.Models.Entities.Factura", b =>
                 {
                     b.Property<int>("FacturaId")
@@ -290,6 +310,10 @@ namespace proyectoprogra.Migrations
 
                     b.Property<decimal>("CreditoAplicado")
                         .HasColumnType("decimal(10,2)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
@@ -448,6 +472,9 @@ namespace proyectoprogra.Migrations
 
                     b.Property<string>("TipoPedido")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UsuarioId")
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("PedidoId");

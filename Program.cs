@@ -95,7 +95,8 @@ builder.Services.AddControllersWithViews(options =>
 builder.Services.AddRazorPages();
 
 // 🔥 EMAIL (para forgot password)
-builder.Services.AddTransient<IEmailSender, EmailSender>();
+builder.Services.AddTransient<EmailSender>();
+builder.Services.AddTransient<IEmailSender>(sp => sp.GetRequiredService<EmailSender>());
 
 // 🔥 PDF (cross-platform via QuestPDF)
 builder.Services.AddSingleton<FacturaPdfService>();

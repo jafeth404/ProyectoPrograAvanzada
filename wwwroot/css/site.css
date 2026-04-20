@@ -4,6 +4,12 @@
    Colors preserved: #32CD32 (light), #85FF00 (dark)
    ============================================= */
 
+/* Logo theme switching */
+.logo-dark { display: none; }
+.logo-light { display: inline-block; }
+[data-bs-theme="dark"] .logo-light { display: none; }
+[data-bs-theme="dark"] .logo-dark { display: inline-block; }
+
 /* Inter font */
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

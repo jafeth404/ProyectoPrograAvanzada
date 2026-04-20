@@ -1,0 +1,150 @@
+@model List<proyectoprogra.Models.ApplicationUser>
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Usuarios";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-xxl flex-grow-1 container-p-y">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-group me-2 text-primary"></i>
+            Usuarios
+        </h4>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bx bx-plus"></i> Nuevo Usuario
+        </a>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+            <i class="bx bx-shield-x fs-4 me-2"></i>
+            <div>@TempData["Error"]</div>
+        </div>
+    }
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+            <i class="bx bx-check-circle fs-4 me-2"></i>
+            <div>@TempData["Exito"]</div>
+        </div>
+    }
+
+    @if (TempData["PasswordGenerada"] != null)
+    {
+        <!-- Auto-open modal for generated password -->
+        <div class="modal fade" id="modalPasswordGenerada" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bx bx-key me-2 text-warning"></i>Contraseña generada automáticamente
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-1">Usuario creado: <strong>@TempData["UsuarioCreado"]</strong></p>
+                        <p class="mb-2">La contraseña temporal asignada es:</p>
+                        <div class="input-group">
+                            <input type="text" id="genPassValue" class="form-control fw-bold font-monospace"
+                                   value="@TempData["PasswordGenerada"]" readonly />
+                            <button class="btn btn-outline-secondary" type="button" id="btnCopyGenPass" title="Copiar">
+                                <i class="bx bx-copy"></i>
+                            </button>
+                        </div>
+                        <p class="text-muted small mt-3 mb-0">
+                            <i class="bx bx-error-circle me-1"></i>
+                            Anote esta contraseña ahora — no se podrá recuperar después.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" data-bs-dismiss="modal">Entendido</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                new bootstrap.Modal(document.getElementById('modalPasswordGenerada')).show();
+
+                document.getElementById('btnCopyGenPass').addEventListener('click', function () {
+                    var val = document.getElementById('genPassValue').value;
+                    navigator.clipboard.writeText(val).then(function () {
+                        var btn = document.getElementById('btnCopyGenPass');
+                        btn.innerHTML = '<i class="bx bx-check"></i>';
+                        setTimeout(function () { btn.innerHTML = '<i class="bx bx-copy"></i>'; }, 1500);
+                    });
+                });
+            });
+        </script>
+    }
+
+    <div class="card">
+        <div class="table-responsive text-nowrap">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Email</th>
+                        <th>Nombre</th>
+                        <th>Roles</th>
+                        <th>Estado</th>
+                        <th>Ha iniciado sesión</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model)
+                    {
+                        var roles = await UserManager.GetRolesAsync(user);
+                        <tr class="@(!user.Activo ? "table-secondary" : "")">
+                            <td>@user.Email</td>
+                            <td>@user.NombreCompleto</td>
+                            <td>@string.Join(", ", roles)</td>
+                            <td>
+                                @if (user.Activo)
+                                {
+                                    <span class="badge bg-label-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-label-danger">Inactivo</span>
+                                }
+                            </td>
+                            <td>
+                                @if (user.HaIniciadoSesion)
+                                {
+                                    <span class="badge bg-label-warning">Sí</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-label-secondary">No</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Edit" asp-route-id="@user.Id" class="btn btn-sm btn-outline-warning me-1">
+                                    <i class="bx bx-edit"></i>
+                                </a>
+                                @if (user.Activo)
+                                {
+                                    <a asp-action="Delete" asp-route-id="@user.Id" class="btn btn-sm btn-outline-danger">
+                                        <i class="bx bx-trash"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-label-secondary">Desactivado</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>

@@ -1,90 +1,93 @@
-﻿@model IEnumerable<proyectoprogra.Models.Entities.Factura>
+@model IEnumerable<proyectoprogra.Models.Entities.Factura>
 
 @{
-    ViewData["Title"] = "Index";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Facturas";
 }
 
-<h1>Index</h1>
+<h2>Facturas</h2>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create" class="btn btn-success">Nueva Factura</a>
 </p>
+
 <table class="table">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.NumeroFactura)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Fecha)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Subtotal)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Iva)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Propina)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CostoEmpaque)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CostoDelivery)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Total)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UsuarioId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Pedido)
-            </th>
+            <th>#</th>
+            <th>Pedido</th>
+            <th>Fecha</th>
+            <th>Total</th>
+            <th>Estado</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
+    @foreach (var f in Model)
+    {
         <tr>
+            <td>@f.NumeroFactura</td>
+            <td>@f.PedidoId</td>
+            <td>@f.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+            <td>₡@f.Total.ToString("N2")</td>
             <td>
-                @Html.DisplayFor(modelItem => item.NumeroFactura)
+                @if (f.Estado == "Pendiente")
+                {
+                    <span class="badge bg-label-warning">
+                        <i class="bx bx-cart me-1"></i>En carrito
+                    </span>
+                }
+                else if (f.Estado == "Completada")
+                {
+                    <span class="badge bg-label-success">
+                        <i class="bx bx-check me-1"></i>Completada
+                    </span>
+                }
+                else
+                {
+                    <span class="badge bg-label-danger">Cancelada</span>
+                }
             </td>
             <td>
-                @Html.DisplayFor(modelItem => item.Fecha)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Subtotal)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Iva)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Propina)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CostoEmpaque)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CostoDelivery)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Total)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UsuarioId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Pedido.PedidoId)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.FacturaId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.FacturaId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.FacturaId">Delete</a>
+                <a asp-action="Details" asp-route-id="@f.FacturaId" class="btn btn-sm btn-info">Detalles</a>
+                <a asp-action="Edit" asp-route-id="@f.FacturaId" class="btn btn-sm btn-primary">Editar</a>
+                <a asp-action="Delete" asp-route-id="@f.FacturaId" class="btn btn-sm btn-danger">Eliminar</a>
+                <a asp-action="Pdf" asp-route-id="@f.FacturaId" class="btn btn-danger btn-sm">PDF</a>
+
+                @if (f.Estado == "Pendiente")
+                {
+                    <form asp-action="Completar" asp-route-id="@f.FacturaId"
+                          method="post" style="display:inline;">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="bx bx-check-circle me-1"></i>Completar
+                        </button>
+                    </form>
+                    <form asp-action="Cancelar" asp-route-id="@f.FacturaId"
+                          method="post" style="display:inline;"
+                          onsubmit="return confirm('¿Cancelar y vaciar este carrito?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bx bx-x-circle me-1"></i>Cancelar
+                        </button>
+                    </form>
+                }
             </td>
         </tr>
-}
+    }
     </tbody>
 </table>

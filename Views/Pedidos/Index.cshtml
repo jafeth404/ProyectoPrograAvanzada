@@ -1,54 +1,56 @@
 ﻿@model IEnumerable<proyectoprogra.Models.Entities.Pedido>
 
 @{
-    ViewData["Title"] = "Index";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Pedidos";
 }
 
-<h1>Index</h1>
+<h1>Pedidos</h1>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create" class="btn btn-success">Nuevo Pedido</a>
 </p>
-<table class="table">
+
+<table class="table table-hover">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.TipoPedido)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Fecha)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Estado)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Mesa)
-            </th>
+            <th>Tipo</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Mesa</th>
+            <th>Total</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.TipoPedido)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Fecha)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Estado)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Mesa.MesaId)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.PedidoId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.PedidoId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.PedidoId">Delete</a>
-            </td>
-        </tr>
+@foreach (var item in Model)
+{
+    var total = item.PedidoDetalles?.Sum(d => d.Cantidad * d.PrecioUnitario) ?? 0;
+
+    <tr>
+        <td>@item.TipoPedido</td>
+        <td>@item.Fecha</td>
+        <td>@item.Estado</td>
+        <td>@item.Mesa?.MesaId</td>
+        <td>₡@total</td>
+
+        <td>
+            <a asp-action="Details" asp-route-id="@item.PedidoId" class="btn btn-sm btn-info">Detalles</a>
+            @if (!User.IsInRole("Usuario") || User.IsInRole("Administrador"))
+            {
+                <a asp-action="Edit" asp-route-id="@item.PedidoId" class="btn btn-sm btn-primary">Editar</a>
+                <a asp-action="Delete" asp-route-id="@item.PedidoId" class="btn btn-sm btn-danger">Eliminar</a>
+                @if (item.PedidoDetalles != null && item.PedidoDetalles.Any())
+                {
+                    <a asp-controller="Facturas"
+                       asp-action="Create"
+                       asp-route-pedidoId="@item.PedidoId"
+                       class="btn btn-sm btn-success">
+                        Facturar
+                    </a>
+                }
+            }
+        </td>
+    </tr>
 }
     </tbody>
 </table>

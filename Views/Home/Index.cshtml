@@ -75,40 +75,42 @@
     var labels = @Html.Raw(JsonSerializer.Serialize(ViewBag.VentasLabels ?? new List<string>()));
     var data = @Html.Raw(JsonSerializer.Serialize(ViewBag.VentasData ?? new List<decimal>()));
 
-    var options = {
-        chart: {
-            type: 'area',
-            height: 350,
-            toolbar: { show: false }
-        },
-        series: [{
-            name: 'Ventas',
-            data: data
-        }],
-        xaxis: {
-            categories: labels
-        },
-        stroke: {
-            curve: 'smooth',
-            width: 3
-        },
-        colors: ['#696cff'],
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shade: 'light',
-                type: "vertical",
-                opacityFrom: 0.5,
-                opacityTo: 0.1
-            }
-        },
-        dataLabels: {
-            enabled: false
-        },
-        grid: {
-            borderColor: '#e7e7e7'
-        }
-    };
+    function buildChartOptions() {
+        var isDark = document.getElementById('htmlRoot').getAttribute('data-bs-theme') === 'dark';
+        return {
+            chart: {
+                type: 'area',
+                height: 350,
+                toolbar: { show: false },
+                background: 'transparent',
+                foreColor: isDark ? '#cfd3ec' : '#6f6b7d'
+            },
+            theme: { mode: isDark ? 'dark' : 'light' },
+            series: [{ name: 'Ventas', data: data }],
+            xaxis: { categories: labels },
+            stroke: { curve: 'smooth', width: 3 },
+            colors: [isDark ? '#85FF00' : '#3eede7'],
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shade: isDark ? 'dark' : 'light',
+                    type: 'vertical',
+                    opacityFrom: 0.5,
+                    opacityTo: 0.1
+                }
+            },
+            dataLabels: { enabled: false },
+            grid: { borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#e7e7e7' }
+        };
+    }
 
-    new ApexCharts(document.querySelector("#ventasChart"), options).render();
+    var chart = new ApexCharts(document.querySelector("#ventasChart"), buildChartOptions());
+    chart.render();
+
+    // Re-render chart when dark mode is toggled
+    document.addEventListener('themeChanged', function (e) {
+        chart.destroy();
+        chart = new ApexCharts(document.querySelector("#ventasChart"), buildChartOptions());
+        chart.render();
+    });
 </script>

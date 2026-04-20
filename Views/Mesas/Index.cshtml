@@ -1,48 +1,194 @@
-﻿@model IEnumerable<proyectoprogra.Models.Entities.Mesa>
+@model IEnumerable<proyectoprogra.Models.Entities.Mesa>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Mesas";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Index</h1>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<p>
-    <a asp-action="Create">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.NumeroMesa)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Capacidad)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Estado)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.NumeroMesa)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Capacidad)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Estado)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.MesaId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.MesaId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.MesaId">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+    <!-- 🔥 HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-table me-2 text-primary"></i>
+            Gestión de Mesas
+        </h4>
+
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bx bx-plus"></i> Nueva Mesa
+        </a>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+            <i class="bx bx-shield-x fs-4 me-2"></i>
+            <div>@TempData["Error"]</div>
+        </div>
+    }
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success d-flex align-items-center mb-4" role="alert">
+            <i class="bx bx-check-circle fs-4 me-2"></i>
+            <div>@TempData["Exito"]</div>
+        </div>
+    }
+
+    <!-- 🔥 TABLA -->
+    <div class="card mb-4">
+        <div class="table-responsive text-nowrap">
+
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mesa</th>
+                        <th>Capacidad</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+
+                            <!-- Número -->
+                            <td>
+                                <span class="badge bg-label-primary fs-6">
+                                    Mesa @item.NumeroMesa
+                                </span>
+                            </td>
+
+                            <!-- Capacidad -->
+                            <td>
+                                <i class="bx bx-user me-1"></i>
+                                @item.Capacidad personas
+                            </td>
+
+                            <!-- Estado -->
+                            <td>
+                                @if (item.Estado == "Disponible")
+                                {
+                                    <span class="badge bg-label-success">Disponible</span>
+                                }
+                                else if (item.Estado == "Ocupada")
+                                {
+                                    <span class="badge bg-label-danger">Ocupada</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-label-warning">@item.Estado</span>
+                                }
+                            </td>
+
+                            <!-- Acciones -->
+                            <td class="text-center">
+
+                                <a asp-action="Edit" asp-route-id="@item.MesaId"
+                                   class="btn btn-sm btn-outline-warning me-1">
+                                    <i class="bx bx-edit"></i>
+                                </a>
+
+                                <a asp-action="Details" asp-route-id="@item.MesaId"
+                                   class="btn btn-sm btn-outline-info me-1">
+                                    <i class="bx bx-show"></i>
+                                </a>
+
+                                <a asp-action="Delete" asp-route-id="@item.MesaId"
+                                   class="btn btn-sm btn-outline-danger">
+                                    <i class="bx bx-trash"></i>
+                                </a>
+
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+
+            </table>
+
+        </div>
+    </div>
+
+    <!-- 🔥 MAPA VISUAL -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bx bx-map me-2"></i>
+                Mapa del Restaurante
+            </h5>
+        </div>
+
+        <div class="card-body">
+
+            <div class="d-flex flex-wrap gap-3" id="mesaMapContainer">
+
+                @foreach (var item in Model)
+                {
+                    <div class="mesa-box text-center p-3 rounded shadow-sm"
+                         data-estado="@item.Estado"
+                         style="width:120px; cursor:pointer; background-color:#252525; color:#e6e6e6;">
+
+                        <i class="bx bx-table fs-2 mb-2"></i>
+
+                        <div class="fw-bold">
+                            Mesa @item.NumeroMesa
+                        </div>
+
+                        <small>@item.Capacidad personas</small>
+
+                        <div class="mt-2">
+                            @if (item.Estado == "Disponible")
+                            {
+                                <span class="badge bg-success">Disponible</span>
+                            }
+                            else if (item.Estado == "Ocupada")
+                            {
+                                <span class="badge bg-danger">Ocupada</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning">@item.Estado</span>
+                            }
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+    (function () {
+        var LIGHT = {
+            Disponible: '#e7f7ef',
+            Ocupada:    '#fdecea',
+            _default:   '#fff4e5'
+        };
+        var DARK_BG = '#252525';
+        var DARK_COLOR = '#e6e6e6';
+
+        function applyMesaColors() {
+            var isDark = (document.getElementById('htmlRoot') || document.documentElement)
+                            .getAttribute('data-bs-theme') === 'dark';
+            document.querySelectorAll('#mesaMapContainer .mesa-box[data-estado]').forEach(function (el) {
+                if (isDark) {
+                    el.style.setProperty('background-color', DARK_BG, 'important');
+                    el.style.setProperty('color', DARK_COLOR, 'important');
+                } else {
+                    var estado = el.getAttribute('data-estado');
+                    el.style.setProperty('background-color', LIGHT[estado] || LIGHT._default, 'important');
+                    el.style.setProperty('color', '', '');
+                }
+            });
+        }
+
+        applyMesaColors();
+        document.addEventListener('themeChanged', applyMesaColors);
+    })();
+</script>

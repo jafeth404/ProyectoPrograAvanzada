@@ -1,45 +1,84 @@
 ﻿@model proyectoprogra.Models.Entities.Mesa
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Editar Mesa";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h1>Edit</h1>
+<div class="container-xxl flex-grow-1 container-p-y">
 
-<h4>Mesa</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="MesaId" />
-            <div class="form-group">
-                <label asp-for="NumeroMesa" class="control-label"></label>
-                <input asp-for="NumeroMesa" class="form-control" />
-                <span asp-validation-for="NumeroMesa" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Capacidad" class="control-label"></label>
-                <input asp-for="Capacidad" class="form-control" />
-                <span asp-validation-for="Capacidad" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Estado" class="control-label"></label>
-                <input asp-for="Estado" class="form-control" />
-                <span asp-validation-for="Estado" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+    <!-- 🔥 HEADER -->
+    <div class="mb-4">
+        <h4 class="fw-bold">
+            <i class="bx bx-edit-alt me-2 text-warning"></i>
+            Editar Mesa
+        </h4>
+        <p class="text-muted">Modifica la información de la mesa</p>
     </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
+    <!-- 🔥 CARD -->
+    <div class="card">
+        <div class="card-body">
+
+            <form asp-action="Edit">
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                <input type="hidden" asp-for="MesaId" />
+
+                <div class="row">
+
+                    <!-- Número de mesa -->
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="NumeroMesa" class="form-label fw-semibold"></label>
+                        <input asp-for="NumeroMesa" class="form-control" />
+                        <span asp-validation-for="NumeroMesa" class="text-danger"></span>
+                    </div>
+
+                    <!-- Capacidad -->
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Capacidad" class="form-label fw-semibold"></label>
+                        <input asp-for="Capacidad" class="form-control" />
+                        <span asp-validation-for="Capacidad" class="text-danger"></span>
+                    </div>
+
+                    <!-- Estado -->
+                    <div class="col-md-4 mb-3">
+                        <label asp-for="Estado" class="form-label fw-semibold"></label>
+
+                        <select asp-for="Estado" class="form-select">
+                            <option value="Disponible">Disponible</option>
+                            <option value="Ocupada">Ocupada</option>
+                            <option value="Reservada">Reservada</option>
+                        </select>
+
+                        <span asp-validation-for="Estado" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+                <!-- 🔥 BOTONES -->
+                <div class="mt-4 d-flex gap-2">
+
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bx bx-save me-1"></i> Guardar cambios
+                    </button>
+
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bx bx-arrow-back me-1"></i> Cancelar
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

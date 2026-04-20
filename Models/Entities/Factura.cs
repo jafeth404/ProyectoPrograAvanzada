@@ -27,6 +27,13 @@ public partial class Factura
 
     public string? UsuarioId { get; set; }
 
+    public decimal CreditoAplicado { get; set; } = 0;
+
+    public bool Reversada { get; set; } = false;
+
+    /// <summary>"Pendiente" = en carrito, "Completada" = finalizada, "Cancelada"</summary>
+    public string Estado { get; set; } = "Completada";
+
     public virtual ICollection<FacturaDetalle> FacturaDetalles { get; set; } = new List<FacturaDetalle>();
 
     public virtual Pedido Pedido { get; set; } = null!;

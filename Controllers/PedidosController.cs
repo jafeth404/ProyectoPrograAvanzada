@@ -9,9 +9,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace proyectoprogra.Controllers
 {
+    [Authorize]
     public class PedidosController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -24,11 +27,20 @@ namespace proyectoprogra.Controllers
         // GET: Pedidos
         public async Task<IActionResult> Index()
         {
-            var pedidos = await _context.Pedidos
+            var query = _context.Pedidos
                 .Include(p => p.Mesa)
-                .ToListAsync();
+                .Include(p => p.PedidoDetalles)
+                    .ThenInclude(d => d.Producto)
+                .AsQueryable();
 
-            return View(pedidos);
+            // Web users only see their own orders
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+            {
+                var uid = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                query = query.Where(p => p.UsuarioId == uid);
+            }
+
+            return View(await query.OrderByDescending(p => p.Fecha).ToListAsync());
         }
 
         // GET: Pedidos/Details/5
@@ -61,18 +73,33 @@ namespace proyectoprogra.Controllers
         // POST: Pedidos/Create (🔥 pantalla única)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(int MesaId, string TipoPedido, string ItemsJson)
+        public async Task<IActionResult> Create(int MesaId, string TipoPedido, string Estado, string ItemsJson)
         {
             if (string.IsNullOrEmpty(TipoPedido))
             {
                 ModelState.AddModelError("", "Debe seleccionar el tipo de pedido");
             }
 
-            var items = JsonSerializer.Deserialize<List<ItemPedidoVM>>(ItemsJson);
-
-            if (items == null || !items.Any())
+            // Usuario (web) restrictions
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
             {
-                ModelState.AddModelError("", "Debe agregar al menos un producto");
+                if (TipoPedido == "Dine-in")
+                    ModelState.AddModelError("", "Los usuarios web no pueden realizar pedidos Dine-in.");
+
+                // Force estado to Pendiente regardless of what was submitted
+                Estado = "Pendiente";
+            }
+
+            var items = string.IsNullOrEmpty(ItemsJson)
+                ? new List<ItemPedidoVM>()
+                : JsonSerializer.Deserialize<List<ItemPedidoVM>>(ItemsJson);
+
+            // Strip any item that has no product or quantity < 1
+            items = items.Where(i => i.ProductoId > 0 && i.Cantidad >= 1).ToList();
+
+            if (!items.Any())
+            {
+                ModelState.AddModelError("", "Debe agregar al menos un producto con cantidad mínima de 1.");
             }
 
             if (!ModelState.IsValid)
@@ -82,51 +109,82 @@ namespace proyectoprogra.Controllers
                 return View();
             }
 
-            // 🔥 Crear pedido
             var pedido = new Pedido
             {
-                MesaId = MesaId,
-                Fecha= DateTime.Now,
-                TipoPedido = TipoPedido
+                MesaId = MesaId == 0 ? null : MesaId,
+                Fecha = DateTime.Now,
+                TipoPedido = TipoPedido,
+                Estado = Estado,
+                UsuarioId = User.FindFirstValue(ClaimTypes.NameIdentifier)
             };
 
-            _context.Add(pedido);
+            _context.Pedidos.Add(pedido);
             await _context.SaveChangesAsync();
 
-            // 🔥 Crear detalles automáticamente
             foreach (var item in items)
             {
                 var producto = await _context.Productos.FindAsync(item.ProductoId);
 
-                var detalle = new PedidoDetalle
+                if (producto == null)
+                    continue;
+
+                if (producto.Stock < item.Cantidad)
+                {
+                    ModelState.AddModelError("", $"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}, solicitado: {item.Cantidad}.");
+                }
+            }
+
+            if (!ModelState.IsValid)
+            {
+                // Roll back the pedido we already saved
+                _context.Pedidos.Remove(pedido);
+                await _context.SaveChangesAsync();
+                ViewData["MesaId"] = new SelectList(_context.Mesas, "MesaId", "MesaId", MesaId);
+                ViewData["Productos"] = _context.Productos.ToList();
+                return View();
+            }
+
+            foreach (var item in items)
+            {
+                var producto = await _context.Productos.FindAsync(item.ProductoId);
+
+                if (producto == null)
+                    continue;
+
+                _context.PedidoDetalles.Add(new PedidoDetalle
                 {
                     PedidoId = pedido.PedidoId,
                     ProductoId = item.ProductoId,
                     Cantidad = item.Cantidad,
-                    PrecioUnitario = producto!.Precio,
+                    PrecioUnitario = producto.Precio,
                     Estado = "Pendiente"
-                };
-
-                _context.Add(detalle);
+                });
             }
 
             await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(Index));
         }
-
         // GET: Pedidos/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return Forbid();
             if (id == null)
                 return NotFound();
 
-            var pedido = await _context.Pedidos.FindAsync(id);
+            var pedido = await _context.Pedidos
+                .Include(p => p.PedidoDetalles)
+                .ThenInclude(d => d.Producto)
+                .FirstOrDefaultAsync(p => p.PedidoId == id);
 
             if (pedido == null)
                 return NotFound();
 
             ViewData["MesaId"] = new SelectList(_context.Mesas, "MesaId", "MesaId", pedido.MesaId);
+
+            // 🔥 ESTE ERA EL PROBLEMA
+            ViewData["Productos"] = _context.Productos.ToList();
 
             return View(pedido);
         }
@@ -134,41 +192,78 @@ namespace proyectoprogra.Controllers
         // POST: Pedidos/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("PedidoId,MesaId")] Pedido pedido)
+        public async Task<IActionResult> Edit(int id, Pedido pedido, string ItemsJson)
         {
-            if (id != pedido.PedidoId)
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return Forbid();
+            var pedidoDb = await _context.Pedidos
+                .Include(p => p.PedidoDetalles)
+                .FirstOrDefaultAsync(p => p.PedidoId == id);
+
+            if (pedidoDb == null)
                 return NotFound();
 
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(pedido);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!_context.Pedidos.Any(e => e.PedidoId == pedido.PedidoId))
-                        return NotFound();
-                    else
-                        throw;
-                }
+            pedidoDb.TipoPedido = pedido.TipoPedido;
+            pedidoDb.MesaId = pedido.MesaId;
+            pedidoDb.Estado = pedido.Estado;
 
-                return RedirectToAction(nameof(Index));
+            var items = JsonSerializer.Deserialize<List<ItemPedidoVM>>(ItemsJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            // 🔥 borrar detalles actuales
+            _context.PedidoDetalles.RemoveRange(pedidoDb.PedidoDetalles);
+
+            // 🔥 crear nuevos
+            foreach (var item in items)
+            {
+                var producto = await _context.Productos.FindAsync(item.ProductoId);
+                if (producto == null) continue;
+
+                if (producto.Stock < item.Cantidad)
+                {
+                    ModelState.AddModelError("", $"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.Stock}, solicitado: {item.Cantidad}.");
+                }
             }
 
-            ViewData["MesaId"] = new SelectList(_context.Mesas, "MesaId", "MesaId", pedido.MesaId);
-            return View(pedido);
+            if (!ModelState.IsValid)
+            {
+                ViewData["MesaId"] = new SelectList(_context.Mesas, "MesaId", "MesaId", pedidoDb.MesaId);
+                ViewData["Productos"] = _context.Productos.ToList();
+                return View(pedidoDb);
+            }
+
+            foreach (var item in items)
+            {
+                var producto = await _context.Productos.FindAsync(item.ProductoId);
+                if (producto == null) continue;
+
+                _context.PedidoDetalles.Add(new PedidoDetalle
+                {
+                    PedidoId = id,
+                    ProductoId = item.ProductoId,
+                    Cantidad = item.Cantidad,
+                    PrecioUnitario = producto.Precio,
+                    Estado = "Pendiente"
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Index));
         }
 
         // GET: Pedidos/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return Forbid();
             if (id == null)
                 return NotFound();
 
             var pedido = await _context.Pedidos
                 .Include(p => p.Mesa)
+                .Include(p => p.PedidoDetalles)
+                .ThenInclude(d => d.Producto)
                 .FirstOrDefaultAsync(m => m.PedidoId == id);
 
             if (pedido == null)
@@ -182,9 +277,13 @@ namespace proyectoprogra.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return Forbid();
             var pedido = await _context.Pedidos
-                .Include(p => p.PedidoDetalles)
-                .FirstOrDefaultAsync(p => p.PedidoId == id);
+            .Include(p => p.Mesa)
+            .Include(p => p.PedidoDetalles)
+            .ThenInclude(d => d.Producto)
+             .FirstOrDefaultAsync(m => m.PedidoId == id);
 
             if (pedido != null)
             {
@@ -200,3 +299,4 @@ namespace proyectoprogra.Controllers
         }
     }
 }
+

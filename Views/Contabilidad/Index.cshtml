@@ -1,0 +1,214 @@
+@model proyectoprogra.Models.ViewModels.ContabilidadIndexVM
+
+@{
+    ViewData["Title"] = "Contabilidad – Historial de Facturas";
+}
+
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h4 class="fw-bold mb-0">
+            <i class="bx bx-line-chart me-2 text-primary"></i>Historial de Facturas
+        </h4>
+        <p class="text-muted mb-0 small">Consulte, filtre y reversen ventas</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header py-3">
+        <h6 class="mb-0 fw-semibold"><i class="bx bx-filter-alt me-2"></i>Filtros</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" asp-action="Index">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-medium">Cliente</label>
+                    <select name="usuarioId" class="form-select">
+                        <option value="">— Todos los clientes —</option>
+                        @foreach (var u in Model.Usuarios)
+                        {
+                            if (Model.UsuarioId == u.Id)
+                            {
+                                <option value="@u.Id" selected>@u.NombreCompleto (@u.Email)</option>
+                            }
+                            else
+                            {
+                                <option value="@u.Id">@u.NombreCompleto (@u.Email)</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-medium">Desde</label>
+                    <input type="date" name="desde" class="form-control"
+                           value="@(Model.Desde?.ToString("yyyy-MM-dd"))" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-medium">Hasta</label>
+                    <input type="date" name="hasta" class="form-control"
+                           value="@(Model.Hasta?.ToString("yyyy-MM-dd"))" />
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">
+                        <i class="bx bx-search me-1"></i>Filtrar
+                    </button>
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="bx bx-x"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast for reversal messages -->
+<div id="toastContainer" class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+    <div id="reversalToast" class="toast align-items-center text-bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMsg"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Results -->
+@if (!Model.Facturas.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bx bx-receipt fs-1 text-muted mb-3"></i>
+            <h5 class="text-muted">No se encontraron facturas con los filtros aplicados.</h5>
+        </div>
+    </div>
+}
+else
+{
+    var totalGeneral = Model.Facturas.Where(f => !f.Reversada).Sum(f => f.Total);
+
+    <div class="card shadow-sm">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-semibold">@Model.Facturas.Count factura(s) encontrada(s)</h6>
+            <span class="fw-bold text-success">Total: ₡@totalGeneral.ToString("N2")</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Número</th>
+                        <th>Pedido</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th class="text-end">Subtotal</th>
+                        <th class="text-end">IVA</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center pe-4">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var f in Model.Facturas)
+                    {
+                        var horasAntigüedad = (DateTime.Now - f.Fecha).TotalHours;
+                        var reversable = !f.Reversada && horasAntigüedad <= 24;
+                        <tr class="@(f.Reversada ? "opacity-50" : "")">
+                            <td class="ps-4 fw-medium small">@f.NumeroFactura</td>
+                            <td>#@f.PedidoId</td>
+                            <td class="text-muted small">@f.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="small">
+                                @if (!string.IsNullOrEmpty(f.UsuarioId))
+                                {
+                                    var u = Model.Usuarios.FirstOrDefault(u => u.Id == f.UsuarioId);
+                                    @(u?.NombreCompleto ?? f.UsuarioId)
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Genérico</span>
+                                }
+                            </td>
+                            <td class="text-end">₡@f.Subtotal.ToString("N2")</td>
+                            <td class="text-end">₡@f.Iva.ToString("N2")</td>
+                            <td class="text-end fw-semibold">₡@f.Total.ToString("N2")</td>
+                            <td class="text-center">
+                                @if (f.Reversada)
+                                {
+                                    <span class="badge bg-label-danger">Reversada</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-label-success">Activa</span>
+                                }
+                            </td>
+                            <td class="text-center pe-4">
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <a asp-controller="Facturas" asp-action="Pdf" asp-route-id="@f.FacturaId"
+                                       class="btn btn-sm btn-icon btn-outline-danger" title="PDF" target="_blank">
+                                        <i class="bx bxs-file-pdf"></i>
+                                    </a>
+                                    @if (reversable)
+                                    {
+                                        <button class="btn btn-sm btn-outline-warning btn-reversar"
+                                                data-factura-id="@f.FacturaId"
+                                                data-numero="@f.NumeroFactura"
+                                                title="Reversar venta">
+                                            <i class="bx bx-undo me-1"></i>Reversar
+                                        </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@* Hidden form so JS can reliably read the antiforgery token *@
+<form id="__afTokenForm" style="display:none">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+<script>
+    const token = document.querySelector('#__afTokenForm input[name="__RequestVerificationToken"]')?.value ?? '';
+
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('.btn-reversar');
+        if (!btn) return;
+
+        const facturaId = parseInt(btn.dataset.facturaId);
+        const numero    = btn.dataset.numero;
+
+        if (!confirm(`¿Reversar la factura ${numero}?\n\nEl monto se acreditará al cliente. Esta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Reversando…';
+
+        try {
+            const r = await fetch('/Contabilidad/Reversar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                body: JSON.stringify({ facturaId })
+            });
+
+            let data;
+            try { data = await r.json(); }
+            catch { data = { success: false, message: `Error del servidor (${r.status}).` }; }
+
+            if (data.success) {
+                document.getElementById('toastMsg').textContent = data.message;
+                new bootstrap.Toast(document.getElementById('reversalToast')).show();
+                setTimeout(() => location.reload(), 2500);
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bx bx-undo me-1"></i>Reversar';
+                alert(data.message ?? 'Error al reversar.');
+            }
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-undo me-1"></i>Reversar';
+            alert('Error de red: ' + err.message);
+        }
+    });
+</script>
+}

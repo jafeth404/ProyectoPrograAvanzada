@@ -1,0 +1,155 @@
+@model IEnumerable<proyectoprogra.Models.Entities.Pedido>
+
+@{
+    ViewData["Title"] = "Salonero – Pedidos en Mesa";
+}
+
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h4 class="fw-bold mb-0">
+            <i class="bx bx-chair me-2 text-primary"></i>Pedidos en Mesa
+        </h4>
+        <p class="text-muted mb-0 small">Pedidos dine-in activos</p>
+    </div>
+    <div class="col-auto">
+        <a asp-action="NuevoPedido" class="btn btn-primary">
+            <i class="bx bx-plus me-1"></i>Nuevo Pedido
+        </a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+        <i class="bx bx-check-circle me-1"></i>@TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (!Model.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bx bx-dish fs-1 text-muted mb-3"></i>
+            <h5 class="text-muted">No hay pedidos en mesa actualmente.</h5>
+            <a asp-action="NuevoPedido" class="btn btn-primary mt-2">Crear primer pedido</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-header py-3">
+            <h6 class="mb-0 fw-semibold">Pedidos activos</h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">#</th>
+                        <th>Mesa</th>
+                        <th>Fecha</th>
+                        <th>Estado</th>
+                        <th>Ítems</th>
+                        <th>Total</th>
+                        <th class="text-center pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model)
+                    {
+                        var total = p.PedidoDetalles.Sum(d => d.Cantidad * d.PrecioUnitario);
+                        var yaEnCocina = p.Estado == "En Cocina";
+                        <tr>
+                            <td class="ps-4 fw-bold">#@p.PedidoId</td>
+                            <td>
+                                <span class="badge bg-label-info">Mesa @p.Mesa?.MesaId</span>
+                            </td>
+                            <td class="text-muted small">@p.Fecha.ToString("dd/MM HH:mm")</td>
+                            <td>
+                                @if (yaEnCocina)
+                                {
+                                    <span class="badge bg-label-warning">En Cocina</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-label-secondary">@(p.Estado ?? "Pendiente")</span>
+                                }
+                            </td>
+                            <td>@p.PedidoDetalles.Count ítem(s)</td>
+                            <td class="fw-semibold">₡@total.ToString("N2")</td>
+                            <td class="text-center pe-4">
+                                @if (!yaEnCocina)
+                                {
+                                    <button class="btn btn-sm btn-warning btn-enviar"
+                                            data-pedido-id="@p.PedidoId"
+                                            id="btn-enviar-@p.PedidoId">
+                                        <i class="bx bx-send me-1"></i>Enviar a Cocina
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-success small"><i class="bx bx-check me-1"></i>Enviado</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@* Hidden form so JS can reliably read the antiforgery token *@
+<form id="__afTokenForm" style="display:none">@Html.AntiForgeryToken()</form>
+
+@section Scripts {
+<script>
+    const tokenValue = document.querySelector('#__afTokenForm input[name="__RequestVerificationToken"]')?.value ?? '';
+
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('.btn-enviar');
+        if (!btn) return;
+
+        const pedidoId = parseInt(btn.dataset.pedidoId);
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enviando…';
+
+        try {
+            const r = await fetch('/Salonero/EnviarACocina', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': tokenValue
+                },
+                body: JSON.stringify({ pedidoId })
+            });
+
+            let data;
+            try { data = await r.json(); }
+            catch { data = { success: false, message: `Error del servidor (${r.status}).` }; }
+
+            if (!r.ok || !data.success) {
+                alert(data.message ?? `Error del servidor (${r.status}).`);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bx bx-send me-1"></i>Enviar a Cocina';
+                return;
+            }
+
+            // Replace button with "Enviado" indicator
+            btn.closest('td').innerHTML =
+                '<span class="text-success small"><i class="bx bx-check me-1"></i>Enviado</span>';
+
+            // Update status badge in the same row
+            const estadoCell = btn.closest('tr').querySelector('td:nth-child(4)');
+            if (estadoCell)
+                estadoCell.innerHTML = '<span class="badge bg-label-warning">En Cocina</span>';
+
+        } catch (err) {
+            alert('Error de red: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-send me-1"></i>Enviar a Cocina';
+        }
+    });
+</script>
+}

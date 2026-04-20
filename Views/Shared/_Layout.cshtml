@@ -1,9 +1,18 @@
-﻿<!DOCTYPE html>
-<html lang="es">
+﻿@using Microsoft.AspNetCore.Identity
+@using proyectoprogra.Models
+@inject UserManager<ApplicationUser> UserManager
+
+<!DOCTYPE html>
+<html lang="es" id="htmlRoot">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - RestauranteApp</title>
+
+    <!-- Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap" rel="stylesheet">
 
     <!-- SNEAT CSS -->
     <link href="/sneat/assets/vendor/css/core.css" rel="stylesheet" />
@@ -12,9 +21,18 @@
     <link href="/sneat/assets/vendor/fonts/boxicons.css" rel="stylesheet" />
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
 
-    <!-- Helpers -->
+    <link rel="stylesheet" href="/css/site.css" />
+
     <script src="/sneat/assets/vendor/js/helpers.js"></script>
 
+    <!-- Apply saved theme before render to prevent flash -->
+    <script>
+        (function () {
+            if (localStorage.getItem('theme') === 'dark') {
+                document.getElementById('htmlRoot').setAttribute('data-bs-theme', 'dark');
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -25,14 +43,10 @@
             <!-- 🔥 SIDEBAR -->
             <aside class="layout-menu menu-vertical menu bg-menu-theme">
 
-                <div class="app-brand demo">
-                    <a asp-controller="Home" asp-action="Index" class="app-brand-link d-flex align-items-center">
-
-                        <span class="app-brand-logo me-2">
-                            <i class="bx bx-restaurant fs-2 text-primary"></i>
-                        </span>
-
-                        <span class="app-brand-text fw-bold fs-5">RestauranteApp</span>
+                <div class="app-brand demo d-flex justify-content-center">
+                    <a asp-controller="Home" asp-action="Index" class="app-brand-link d-flex justify-content-center align-items-center">
+                        <img src="/Logo_Blanco.png" alt="NexMesa" class="logo-light" style="height:220px; width:auto;" />
+                        <img src="/Logo_Oscuro.png" alt="NexMesa" class="logo-dark" style="height:220px; width:auto;" />
                     </a>
                 </div>
 
@@ -42,56 +56,176 @@
                         <span class="menu-header-text">Gestión</span>
                     </li>
 
-                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
-                        <a asp-controller="Home" asp-action="Index" class="menu-link">
-                            <i class="menu-icon bx bx-home-alt"></i>
-                            <div>Dashboard</div>
-                        </a>
-                    </li>
+                    <!-- Dashboard (hidden for web users) -->
+                    @if (!User.IsInRole("Usuario") || User.IsInRole("Administrador"))
+                    {
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Home" ? "active" : "")">
+                            <a asp-controller="Home" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-home-alt"></i>
+                                <div>Dashboard</div>
+                            </a>
+                        </li>
+                    }
 
-                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categorias" ? "active" : "")">
-                        <a asp-controller="Categorias" asp-action="Index" class="menu-link">
-                            <i class="menu-icon bx bx-grid-alt"></i>
-                            <div>Categorías</div>
-                        </a>
-                    </li>
+                    <!-- ADMIN -->
+                    @if (User.IsInRole("Administrador"))
+                    {
+                        @if (User.IsInRole("Administrador"))
+                        {
+                            <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Usuarios" ? "active" : "")">
+                                <a asp-controller="Usuarios" asp-action="Index" class="menu-link">
+                                    <i class="menu-icon bx bx-user"></i>
+                                    <div>Usuarios</div>
+                                </a>
+                            </li>
+                            <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Configuracion" ? "active" : "")">
+                                <a asp-controller="Configuracion" asp-action="Index" class="menu-link">
+                                    <i class="menu-icon bx bx-cog"></i>
+                                    <div>Configuración</div>
+                                </a>
+                            </li>
+                        }
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Categorias" ? "active" : "")">
+                            <a asp-controller="Categorias" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-grid-alt"></i>
+                                <div>Categorías</div>
+                            </a>
+                        </li>
 
-                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Productos" ? "active" : "")">
-                        <a asp-controller="Productos" asp-action="Index" class="menu-link">
-                            <i class="menu-icon bx bx-package"></i>
-                            <div>Productos</div>
-                        </a>
-                    </li>
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Productos" ? "active" : "")">
+                            <a asp-controller="Productos" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-package"></i>
+                                <div>Productos</div>
+                            </a>
+                        </li>
 
-                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Mesas" ? "active" : "")">
-                        <a asp-controller="Mesas" asp-action="Index" class="menu-link">
-                            <i class="menu-icon bx bx-chair"></i>
-                            <div>Mesas</div>
-                        </a>
-                    </li>
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Mesas" ? "active" : "")">
+                            <a asp-controller="Mesas" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-chair"></i>
+                                <div>Mesas</div>
+                            </a>
+                        </li>
 
-                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Pedidos" ? "active" : "")">
-                        <a asp-controller="Pedidos" asp-action="Index" class="menu-link">
-                            <i class="menu-icon bx bx-cart-alt"></i>
-                            <div>Pedidos</div>
-                        </a>
-                    </li>
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Pedidos" ? "active" : "")">
+                            <a asp-controller="Pedidos" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-cart-alt"></i>
+                                <div>Pedidos</div>
+                            </a>
+                        </li>
 
-                    <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Facturas" ? "active" : "")">
-                        <a asp-controller="Facturas" asp-action="Index" class="menu-link">
-                            <i class="menu-icon bx bx-file-blank"></i>
-                            <div>Facturas</div>
-                        </a>
-                    </li>
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Facturas" ? "active" : "")">
+                            <a asp-controller="Facturas" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-file-blank"></i>
+                                <div>Facturas</div>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- SALONERO -->
+                    @if (User.IsInRole("Salonero"))
+                    {
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Mesas" ? "active" : "")">
+                            <a asp-controller="Mesas" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-chair"></i>
+                                <div>Mesas</div>
+                            </a>
+                        </li>
+
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Salonero" ? "active" : "")">
+                            <a asp-controller="Salonero" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-cart-alt"></i>
+                                <div>Pedidos en Mesa</div>
+                            </a>
+                        </li>
+
+                        <li class="menu-item">
+                            <a asp-controller="Salonero" asp-action="NuevoPedido" class="menu-link">
+                                <i class="menu-icon bx bx-cart-add"></i>
+                                <div>Nuevo Pedido</div>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- COCINA -->
+                    @if (User.IsInRole("Cocina"))
+                    {
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Cocina" ? "active" : "")">
+                            <a asp-controller="Cocina" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-food-menu"></i>
+                                <div>Cocina</div>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- CAJERO -->
+                    @if (User.IsInRole("Cajero"))
+                    {
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Cajero" ? "active" : "")">
+                            <a asp-controller="Cajero" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-dollar-circle"></i>
+                                <div>Cobros</div>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- CONTABILIDAD -->
+                    @if (User.IsInRole("Contabilidad"))
+                    {
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Contabilidad" ? "active" : "")">
+                            <a asp-controller="Contabilidad" asp-action="Index" class="menu-link">
+                                <i class="menu-icon bx bx-line-chart"></i>
+                                <div>Historial</div>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- USUARIO WEB -->
+                    @if (User.IsInRole("Usuario"))
+                    {
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "Pedidos" ? "active" : "")">
+                            <a asp-controller="Pedidos" asp-action="Create" class="menu-link">
+                                <i class="menu-icon bx bx-cart"></i>
+                                <div>Hacer Pedido</div>
+                            </a>
+                        </li>
+
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "MiCuenta" && ViewContext.RouteData.Values["action"]?.ToString() == "MisDatos" ? "active" : "")">
+                            <a asp-controller="MiCuenta" asp-action="MisDatos" class="menu-link">
+                                <i class="menu-icon bx bx-user-circle"></i>
+                                <div>Mis Datos</div>
+                            </a>
+                        </li>
+
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "MiCuenta" && ViewContext.RouteData.Values["action"]?.ToString() == "MiHistorial" ? "active" : "")">
+                            <a asp-controller="MiCuenta" asp-action="MiHistorial" class="menu-link">
+                                <i class="menu-icon bx bx-history"></i>
+                                <div>Mi Historial</div>
+                            </a>
+                        </li>
+                    }
+
+                    <!-- CUENTA (siempre visible cuando está autenticado) -->
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <li class="menu-header small text-uppercase mt-2">
+                            <span class="menu-header-text">Cuenta</span>
+                        </li>
+
+                        <li class="menu-item @(ViewContext.RouteData.Values["controller"]?.ToString() == "WebAuthn" ? "active" : "")">
+                            <a asp-controller="WebAuthn" asp-action="Manage" class="menu-link">
+                                <i class="menu-icon bx bx-fingerprint"></i>
+                                <div>Mis Passkeys</div>
+                            </a>
+                        </li>
+                    }
 
                 </ul>
-
             </aside>
 
             <!-- 🔥 CONTENIDO -->
             <div class="layout-page">
 
-                <!-- 🔝 NAVBAR -->
+                <!-- NAVBAR -->
                 <nav class="layout-navbar navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme shadow-sm">
                     <div class="navbar-nav-right d-flex align-items-center w-100 px-3">
 
@@ -101,46 +235,43 @@
                         </h5>
 
                         <div class="ms-auto d-flex align-items-center gap-3">
-
-                            <!-- Notificaciones -->
+                            <!-- Dark mode toggle -->
+                            <button id="darkModeToggle" class="btn btn-sm btn-icon rounded-pill" title="Alternar modo oscuro">
+                                <i id="darkModeIcon" class="bx bx-moon fs-5"></i>
+                            </button>
                             <i class="bx bx-bell fs-4"></i>
-
-                            <!-- Usuario -->
                             <partial name="_LoginPartial" />
-
                         </div>
 
                     </div>
                 </nav>
 
-                <!-- 🔥 MAIN -->
+                <!-- MAIN -->
                 <div class="content-wrapper">
                     <div class="container-xxl flex-grow-1 container-p-y">
-
                         @RenderBody()
-
                     </div>
                 </div>
 
-                <!-- 🔻 FOOTER -->
+                <!-- FOOTER -->
                 <footer class="content-footer footer bg-footer-theme">
                     <div class="container-xxl text-center py-3">
-                        © 2026 - RestauranteApp 🚀
+                        © 2026 - RestauranteApp
                     </div>
                 </footer>
 
             </div>
-
         </div>
     </div>
 
-    <!-- 🔥 SCRIPTS -->
+    <!-- SCRIPTS -->
     <script src="/sneat/assets/vendor/libs/jquery/jquery.js"></script>
     <script src="/sneat/assets/vendor/libs/popper/popper.js"></script>
     <script src="/sneat/assets/vendor/js/bootstrap.js"></script>
     <script src="/sneat/assets/vendor/js/menu.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
+    <script src="/js/site.js"></script>
 
 </body>
 </html>

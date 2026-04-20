@@ -1,0 +1,90 @@
+﻿@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "Registro";
+}
+
+<h1>Registro</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+
+            <h4>Crear una nueva cuenta</h4>
+            <hr />
+
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <!-- IDENTIFICACION -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Identificacion" class="form-control" />
+                <label>Identificación</label>
+            </div>
+
+            <!-- NOMBRE -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.NombreCompleto" class="form-control" />
+                <label>Nombre completo</label>
+            </div>
+
+            <!-- GENERO -->
+            <div class="form-floating mb-3">
+                <select asp-for="Input.Genero" class="form-control">
+                    <option value="">Seleccione género</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="No especifica">No especifica</option>
+                </select>
+                <label>Género</label>
+            </div>
+
+            <!-- EMAIL -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Email" class="form-control" autocomplete="username" />
+                <label>Correo electrónico</label>
+                <span asp-validation-for="Input.Email" class="text-danger"></span>
+            </div>
+
+            <!-- TIPO TARJETA -->
+            <div class="form-floating mb-3">
+                <select asp-for="Input.TipoTarjeta" class="form-control">
+                    <option value="">Seleccione tipo de tarjeta</option>
+                    <option value="VISA">VISA</option>
+                    <option value="MASTERCARD">MASTERCARD</option>
+                    <option value="AMERICAN EXPRESS">AMERICAN EXPRESS</option>
+                </select>
+                <label>Tipo de tarjeta</label>
+            </div>
+
+            <!-- NUMERO TARJETA -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.NumeroTarjeta" class="form-control" placeholder="0000-0000-0000-0000" />
+                <label>Número de tarjeta</label>
+            </div>
+
+            <!-- PASSWORD -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
+                <label>Contraseña</label>
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            </div>
+
+            <!-- CONFIRM PASSWORD -->
+            <div class="form-floating mb-3">
+                <input asp-for="Input.ConfirmPassword" class="form-control" />
+                <label>Confirmar contraseña</label>
+                <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
+            </div>
+
+            <!-- BOTON -->
+            <button id="registerSubmit" type="submit" class="w-100 btn btn-primary">
+                Registrarse
+            </button>
+
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

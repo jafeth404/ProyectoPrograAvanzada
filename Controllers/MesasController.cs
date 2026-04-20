@@ -140,12 +140,23 @@ namespace proyectoprogra.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var mesa = await _context.Mesas.FindAsync(id);
-            if (mesa != null)
+            if (mesa == null) return RedirectToAction(nameof(Index));
+
+            // Validación: la mesa tiene pedidos activos
+            bool tienePedidosActivos = await _context.Pedidos.AnyAsync(p =>
+                p.MesaId == id &&
+                p.Estado != "Cancelado" &&
+                p.Estado != "Completado" &&
+                p.Estado != "Cerrado");
+            if (tienePedidosActivos)
             {
-                _context.Mesas.Remove(mesa);
+                TempData["Error"] = "No se puede eliminar esta mesa porque tiene pedidos activos. Cierre o cancele todos los pedidos de esta mesa primero.";
+                return RedirectToAction(nameof(Delete), new { id });
             }
 
+            _context.Mesas.Remove(mesa);
             await _context.SaveChangesAsync();
+            TempData["Exito"] = $"La Mesa {mesa.NumeroMesa} fue eliminada correctamente.";
             return RedirectToAction(nameof(Index));
         }
 

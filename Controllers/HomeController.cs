@@ -18,13 +18,18 @@ namespace proyectoprogra.Controllers
 
         public IActionResult Index()
         {
+            // Usuario (web) has no dashboard — send straight to their order page
+            if (User.IsInRole("Usuario") && !User.IsInRole("Administrador"))
+                return RedirectToAction("Create", "Pedidos");
+
             // TARJETAS DEL DASHBOARD
             ViewBag.TotalProductos = _context.Productos.Count();
             ViewBag.TotalPedidos = _context.Pedidos.Count();
+            ViewBag.TotalMesas = _context.Mesas.Count();
 
             // GRÁFICO SIMPLE (cantidad de pedidos por día)
             var pedidosPorDia = _context.Pedidos
-                .GroupBy(p => p.Fecha)
+                .GroupBy(p => p.Fecha.Date)
                 .Select(g => new
                 {
                     Fecha = g.Key,

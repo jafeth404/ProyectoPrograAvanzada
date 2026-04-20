@@ -1,0 +1,193 @@
+@{
+    ViewData["Title"] = "Nuevo Pedido en Mesa";
+    var mesas = ViewData["Mesas"] as List<proyectoprogra.Models.Entities.Mesa> ?? new();
+    var productos = ViewData["Productos"] as List<proyectoprogra.Models.Entities.Producto> ?? new();
+}
+
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h4 class="fw-bold mb-0">
+            <i class="bx bx-cart-add me-2 text-primary"></i>Nuevo Pedido Dine-in
+        </h4>
+        <p class="text-muted mb-0 small">Asigne una mesa y seleccione los productos</p>
+    </div>
+    <div class="col-auto">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bx bx-arrow-back me-1"></i>Volver
+        </a>
+    </div>
+</div>
+
+<div asp-validation-summary="All" class="alert alert-danger" style="display:none" id="validationErrors"></div>
+
+<form asp-action="NuevoPedido" method="post" id="pedidoForm">
+    @Html.AntiForgeryToken()
+
+    <div class="row g-4">
+        <!-- Mesa selection -->
+        <div class="col-12 col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header py-3">
+                    <h6 class="mb-0 fw-semibold"><i class="bx bx-chair me-2"></i>Asignación de Mesa</h6>
+                </div>
+                <div class="card-body">
+                    <label class="form-label fw-medium">Mesa <span class="text-danger">*</span></label>
+                    <select name="MesaId" class="form-select" required>
+                        <option value="" disabled selected>Seleccionar mesa…</option>
+                        @foreach (var m in mesas)
+                        {
+                            <option value="@m.MesaId">
+                                Mesa @m.NumeroMesa – Cap. @m.Capacidad
+                                @(m.Estado == "Ocupada" ? "(Ocupada)" : "")
+                            </option>
+                        }
+                    </select>
+                    <div class="mt-3 p-3 bg-light rounded small">
+                        <i class="bx bx-info-circle text-info me-1"></i>
+                        El tipo de pedido se establece automáticamente como <strong>Dine-in</strong>.
+                        Se aplicará propina del 10% al facturar.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product picker -->
+        <div class="col-12 col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header py-3">
+                    <h6 class="mb-0 fw-semibold"><i class="bx bx-food-menu me-2"></i>Agregar Productos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 align-items-end mb-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label fw-medium">Producto</label>
+                            <select id="productoSelect" class="form-select">
+                                <option value="" disabled selected>Seleccione…</option>
+                                @foreach (var prod in productos)
+                                {
+                                    <option value="@prod.ProductoId"
+                                            data-precio="@prod.Precio"
+                                            data-nombre="@prod.Nombre">
+                                        @prod.Nombre — ₡@prod.Precio.ToString("N2")
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6 col-sm-3">
+                            <label class="form-label fw-medium">Cantidad</label>
+                            <input type="number" id="cantidadInput" class="form-control" min="1" value="1" />
+                        </div>
+                        <div class="col-6 col-sm-3">
+                            <button type="button" class="btn btn-primary w-100" onclick="agregarProducto()">
+                                <i class="bx bx-plus me-1"></i>Agregar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle" id="detalleTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">Precio</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                            <tfoot>
+                                <tr class="fw-bold">
+                                    <td colspan="3" class="text-end">Total:</td>
+                                    <td class="text-end" id="totalCell">₡0.00</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="ItemsJson" name="ItemsJson" value="[]" />
+
+    <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-success">
+            <i class="bx bx-save me-1"></i>Guardar Pedido
+        </button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+    </div>
+</form>
+
+@section Scripts {
+<script>
+let items = [];
+
+function agregarProducto() {
+    const sel = document.getElementById('productoSelect');
+    const cant = parseInt(document.getElementById('cantidadInput').value);
+
+    if (!sel.value || cant < 1) {
+        alert('Seleccione un producto y una cantidad válida.');
+        return;
+    }
+
+    const id = parseInt(sel.value);
+    const opt = sel.options[sel.selectedIndex];
+    const nombre = opt.dataset.nombre;
+    const precio = parseFloat(opt.dataset.precio);
+
+    const existing = items.find(i => i.ProductoId === id);
+    if (existing) {
+        existing.Cantidad += cant;
+    } else {
+        items.push({ ProductoId: id, nombre, precio, Cantidad: cant });
+    }
+
+    renderTabla();
+    sel.value = '';
+    document.getElementById('cantidadInput').value = 1;
+}
+
+function eliminarItem(idx) {
+    items.splice(idx, 1);
+    renderTabla();
+}
+
+function renderTabla() {
+    const tbody = document.querySelector('#detalleTable tbody');
+    let total = 0;
+    tbody.innerHTML = '';
+
+    items.forEach((item, i) => {
+        const sub = item.precio * item.Cantidad;
+        total += sub;
+        tbody.innerHTML += `
+            <tr>
+                <td>${item.nombre}</td>
+                <td class="text-center">${item.Cantidad}</td>
+                <td class="text-end">₡${item.precio.toFixed(2)}</td>
+                <td class="text-end fw-medium">₡${sub.toFixed(2)}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-icon btn-outline-danger"
+                            onclick="eliminarItem(${i})">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                </td>
+            </tr>`;
+    });
+
+    document.getElementById('totalCell').textContent = '₡' + total.toFixed(2);
+}
+
+document.getElementById('pedidoForm').addEventListener('submit', function (e) {
+    if (items.length === 0) {
+        alert('Debe agregar al menos un producto.');
+        e.preventDefault();
+        return;
+    }
+    document.getElementById('ItemsJson').value = JSON.stringify(items);
+});
+</script>
+}

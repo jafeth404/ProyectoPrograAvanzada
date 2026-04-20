@@ -1,50 +1,128 @@
 ﻿@model proyectoprogra.Models.Entities.Pedido
 
-@{
-    ViewData["Title"] = "Edit";
-    Layout = "~/Views/Shared/_Layout.cshtml";
-}
+<h1>Editar Pedido</h1>
 
-<h1>Edit</h1>
+<form asp-action="Edit" method="post" id="editForm">
 
-<h4>Pedido</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="PedidoId" />
-            <div class="form-group">
-                <label asp-for="TipoPedido" class="control-label"></label>
-                <input asp-for="TipoPedido" class="form-control" />
-                <span asp-validation-for="TipoPedido" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="MesaId" class="control-label"></label>
-                <select asp-for="MesaId" class="form-control" asp-items="ViewBag.MesaId"></select>
-                <span asp-validation-for="MesaId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Fecha" class="control-label"></label>
-                <input asp-for="Fecha" class="form-control" />
-                <span asp-validation-for="Fecha" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Estado" class="control-label"></label>
-                <input asp-for="Estado" class="form-control" />
-                <span asp-validation-for="Estado" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+    <input type="hidden" asp-for="PedidoId" />
+    <input type="hidden" id="ItemsJson" name="ItemsJson" />
+
+    <div class="card p-4 mb-4">
+
+        <div class="mb-3">
+            <label>Tipo Pedido</label>
+            <input asp-for="TipoPedido" class="form-control" />
+        </div>
+
+        <div class="mb-3">
+            <label>Mesa</label>
+            <select asp-for="MesaId" class="form-control" asp-items="ViewBag.MesaId"></select>
+        </div>
+
+        <div class="mb-3">
+            <label>Estado</label>
+            <select asp-for="Estado" class="form-control">
+                <option>Pendiente</option>
+                <option>En proceso</option>
+                <option>Completo</option>
+            </select>
+        </div>
+
     </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
+    <!-- AGREGAR PRODUCTO -->
+    <div class="card p-4 mb-4">
+        <h4>Agregar Producto</h4>
 
-@section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+        <select id="productoSelect" class="form-control mb-2">
+            <option value="">Seleccione producto</option>
+            @foreach (var p in ViewBag.Productos)
+            {
+                <option value="@p.ProductoId" data-precio="@p.Precio">
+                    @p.Nombre (@p.Precio)
+                </option>
+            }
+        </select>
+
+        <input type="number" id="cantidadInput" class="form-control mb-2" placeholder="Cantidad" />
+
+        <button type="button" class="btn btn-primary" onclick="agregarProducto()">Agregar</button>
+    </div>
+
+    <!-- TABLA -->
+    <div class="card p-4">
+        <h4>Detalle del Pedido</h4>
+
+        <table class="table" id="detalleTable">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var d in Model.PedidoDetalles)
+                {
+                    <tr data-id="@d.ProductoId" data-precio="@d.PrecioUnitario">
+                        <td>@d.Producto.Nombre</td>
+                        <td>@d.Cantidad</td>
+                        <td>@d.PrecioUnitario</td>
+                        <td>@(d.Cantidad * d.PrecioUnitario)</td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">X</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <button type="submit" class="btn btn-success mt-3">Guardar</button>
+</form>
+
+<script>
+function agregarProducto() {
+    const select = document.getElementById("productoSelect");
+    const cantidad = parseInt(document.getElementById("cantidadInput").value);
+
+    if (!select.value || cantidad <= 0) return;
+
+    const nombre = select.options[select.selectedIndex].text;
+    const precio = parseFloat(select.options[select.selectedIndex].dataset.precio);
+
+    const row = `
+        <tr data-id="${select.value}" data-precio="${precio}">
+            <td>${nombre}</td>
+            <td>${cantidad}</td>
+            <td>${precio}</td>
+            <td>${precio * cantidad}</td>
+            <td><button type="button" onclick="this.closest('tr').remove()">X</button></td>
+        </tr>
+    `;
+
+    document.querySelector("#detalleTable tbody").innerHTML += row;
+
+    select.value = "";
+    document.getElementById("cantidadInput").value = "";
 }
+
+document.getElementById("editForm").addEventListener("submit", function () {
+
+    let items = [];
+
+    document.querySelectorAll("#detalleTable tbody tr").forEach(row => {
+        const id = parseInt(row.dataset.id);
+        const cantidad = parseInt(row.children[1].innerText);
+
+        items.push({
+            ProductoId: id,
+            Cantidad: cantidad
+        });
+    });
+
+    document.getElementById("ItemsJson").value = JSON.stringify(items);
+});
+</script>

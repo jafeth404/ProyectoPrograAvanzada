@@ -1,0 +1,237 @@
+@model IEnumerable<proyectoprogra.Models.Entities.Pedido>
+
+@{
+    ViewData["Title"] = "Cocina – Pedidos Activos";
+}
+
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h4 class="fw-bold mb-0">
+            <i class="bx bx-food-menu me-2 text-primary"></i>Vista de Cocina
+        </h4>
+        <p class="text-muted mb-0 small">Pedidos con ítems pendientes de preparación</p>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+            <i class="bx bx-refresh me-1"></i>Actualizar
+        </button>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bx bx-check-circle fs-1 text-success mb-3"></i>
+            <h5 class="text-muted">¡Todo listo! No hay pedidos pendientes.</h5>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4" id="pedidosContainer">
+        @foreach (var pedido in Model)
+        {
+            var itemsPendientes = pedido.PedidoDetalles.Where(d => d.Estado != "Listo").ToList();
+
+            <div class="col-12 col-md-6 col-xl-4" id="pedido-card-@pedido.PedidoId">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <span class="fw-bold fs-6">Pedido #@pedido.PedidoId</span>
+                            @if (pedido.Mesa != null)
+                            {
+                                <span class="badge bg-label-info ms-2">Mesa @pedido.Mesa.MesaId</span>
+                            }
+                        </div>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            <span class="badge bg-label-secondary small">@pedido.TipoPedido</span>
+                            <span class="text-muted small">@pedido.Fecha.ToString("HH:mm")</span>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Producto</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="items-pedido-@pedido.PedidoId">
+                                @foreach (var item in pedido.PedidoDetalles)
+                                {
+                                    <tr id="item-row-@item.DetalleId" class="@(item.Estado == "Listo" ? "table-success opacity-75" : "")">
+                                        <td class="ps-3 fw-medium">@item.Producto?.Nombre</td>
+                                        <td class="text-center">@item.Cantidad</td>
+                                        <td class="text-center">
+                                            <span id="badge-@item.DetalleId" class="badge @EstadoBadgeClass(item.Estado)">
+                                                @item.Estado
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            @if (item.Estado != "Listo")
+                                            {
+                                                <button class="btn btn-sm @BtnClass(item.Estado) btn-avanzar"
+                                                        data-detalle-id="@item.DetalleId"
+                                                        data-pedido-id="@pedido.PedidoId"
+                                                        id="btn-@item.DetalleId">
+                                                    @BtnLabel(item.Estado)
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <i class="bx bx-check-circle text-success fs-5" id="btn-@item.DetalleId"></i>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@functions {
+    string EstadoBadgeClass(string? estado) => estado switch
+    {
+        "Pendiente"      => "bg-label-warning",
+        "En preparación" => "bg-label-primary",
+        "Listo"          => "bg-label-success",
+        _                => "bg-label-secondary"
+    };
+
+    string BtnClass(string? estado) => estado switch
+    {
+        "Pendiente"      => "btn-warning",
+        "En preparación" => "btn-primary",
+        _                => "btn-secondary"
+    };
+
+    string BtnLabel(string? estado) => estado switch
+    {
+        "Pendiente"      => "Iniciar",
+        "En preparación" => "Marcar Listo",
+        _                => "–"
+    };
+}
+
+@section Scripts {
+<script>
+    const antiForgeryToken = '@Html.AntiForgeryToken()';
+
+    // Extract the token value from the hidden input rendered by Html.AntiForgeryToken()
+    const tokenInput = document.createElement('div');
+    tokenInput.innerHTML = antiForgeryToken;
+    const tokenValue = tokenInput.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.btn-avanzar');
+        if (!btn) return;
+
+        const detalleId = parseInt(btn.dataset.detalleId);
+        const pedidoId = parseInt(btn.dataset.pedidoId);
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        fetch('/Cocina/ActualizarEstado', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': tokenValue
+            },
+            body: JSON.stringify({ detalleId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                alert(data.message ?? 'Error al actualizar el estado.');
+                btn.disabled = false;
+                return;
+            }
+
+            const nuevoEstado = data.nuevoEstado;
+            const row = document.getElementById('item-row-' + detalleId);
+            const badge = document.getElementById('badge-' + detalleId);
+
+            // Update badge
+            badge.textContent = nuevoEstado;
+            badge.className = 'badge ' + badgeClass(nuevoEstado);
+
+            if (nuevoEstado === 'Listo') {
+                // Replace button with check icon
+                btn.outerHTML = '<i class="bx bx-check-circle text-success fs-5" id="btn-' + detalleId + '"></i>';
+                row.classList.add('table-success', 'opacity-75');
+            } else {
+                btn.disabled = false;
+                btn.className = 'btn btn-sm ' + btnClass(nuevoEstado) + ' btn-avanzar';
+                btn.innerHTML = btnLabel(nuevoEstado);
+            }
+
+            // If all items are "Listo", fade out the card after a brief delay
+            if (data.pedidoCompleto) {
+                const card = document.getElementById('pedido-card-' + pedidoId);
+                if (card) {
+                    card.style.transition = 'opacity 0.8s';
+                    setTimeout(() => {
+                        card.style.opacity = '0';
+                        setTimeout(() => {
+                            card.remove();
+                            checkEmpty();
+                        }, 800);
+                    }, 1200);
+                }
+            }
+        })
+        .catch(() => {
+            alert('Error de conexión al actualizar el estado.');
+            btn.disabled = false;
+            btn.innerHTML = 'Reintentar';
+        });
+    });
+
+    function checkEmpty() {
+        const container = document.getElementById('pedidosContainer');
+        if (container && container.children.length === 0) {
+            container.outerHTML = `
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="bx bx-check-circle fs-1 text-success mb-3"></i>
+                        <h5 class="text-muted">¡Todo listo! No hay pedidos pendientes.</h5>
+                    </div>
+                </div>`;
+        }
+    }
+
+    function badgeClass(estado) {
+        switch (estado) {
+            case 'Pendiente':       return 'bg-label-warning';
+            case 'En preparación':  return 'bg-label-primary';
+            case 'Listo':           return 'bg-label-success';
+            default:                return 'bg-label-secondary';
+        }
+    }
+
+    function btnClass(estado) {
+        switch (estado) {
+            case 'Pendiente':       return 'btn-warning';
+            case 'En preparación':  return 'btn-primary';
+            default:                return 'btn-secondary';
+        }
+    }
+
+    function btnLabel(estado) {
+        switch (estado) {
+            case 'Pendiente':       return 'Iniciar';
+            case 'En preparación':  return 'Marcar Listo';
+            default:                return '–';
+        }
+    }
+</script>
+}

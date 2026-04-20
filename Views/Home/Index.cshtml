@@ -109,6 +109,8 @@
 
     // Re-render chart when dark mode is toggled
     document.addEventListener('themeChanged', function (e) {
-        chart.updateOptions(buildChartOptions());
+        chart.destroy();
+        chart = new ApexCharts(document.querySelector("#ventasChart"), buildChartOptions());
+        chart.render();
     });
 </script>
